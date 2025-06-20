@@ -88,7 +88,19 @@ let mockMembers: AdminMember[] = [
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-const mockService = {
+// Define common service interface
+export interface MemberServiceInterface {
+  getAll(): Promise<AdminMember[] | Member[]>;
+  getById(id: string): Promise<AdminMember | Member | null>;
+  create(data: any): Promise<AdminMember | Member>;
+  update(id: string, updates: any): Promise<AdminMember | Member | null>;
+  delete(id: string): Promise<boolean | void>;
+  resetPassword?(id: string, newPassword?: string): Promise<boolean>;
+  toggleStatus?(id: string): Promise<AdminMember | null>;
+  importFromCSV?(csvData: string): Promise<{ success: number; duplicates: number; errors: number; }>;
+}
+
+const mockService: MemberServiceInterface = {
   getAll: async (): Promise<AdminMember[]> => {
     await delay(300);
     return [...mockMembers];
@@ -134,7 +146,8 @@ const mockService = {
     }
     return false;
   },
-    resetPassword: async (id: string, newPassword?: string): Promise<boolean> => {
+
+  resetPassword: async (id: string, newPassword?: string): Promise<boolean> => {
     await delay(400);
     const member = mockMembers.find(m => m.id === id);
     if (member) {
@@ -290,13 +303,54 @@ const deleteMember = async (id: string): Promise<void> => {
   });
 };
 
-const realService = {
+// Add missing methods for real service to match interface
+const resetPasswordReal = async (id: string, newPassword?: string): Promise<boolean> => {
+  try {
+    await request(`/auth/members/${id}/reset-password`, {
+      method: 'POST',
+      data: { newPassword }
+    });
+    return true;
+  } catch (error) {
+    console.error('Failed to reset password:', error);
+    return false;
+  }
+};
+
+const toggleStatusReal = async (id: string): Promise<AdminMember | null> => {
+  try {
+    const response = await request<AdminMember>(`/auth/members/${id}/toggle-status`, {
+      method: 'POST'
+    });
+    return response.result;
+  } catch (error) {
+    console.error('Failed to toggle status:', error);
+    return null;
+  }
+};
+
+const importFromCSVReal = async (csvData: string): Promise<{ success: number; duplicates: number; errors: number; }> => {
+  try {
+    const response = await request<{ success: number; duplicates: number; errors: number; }>('/auth/members/import', {
+      method: 'POST',
+      data: { csvData }
+    });
+    return response.result;
+  } catch (error) {
+    console.error('Failed to import CSV:', error);
+    return { success: 0, duplicates: 0, errors: 1 };
+  }
+};
+
+const realService: MemberServiceInterface = {
   getAll: getAllMembers,
   getById: getMemberById,
   create: createMember,
   update: updateMember,
-  patch: patchMember,
   delete: deleteMember,
+  resetPassword: resetPasswordReal,
+  toggleStatus: toggleStatusReal,
+  importFromCSV: importFromCSVReal,
 };
 
 // -------------------------------------------

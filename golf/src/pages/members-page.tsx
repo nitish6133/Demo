@@ -1,4 +1,3 @@
-// components/admin-members/AdminMembersPage.tsx
 import { USE_MOCK } from '@/config/config';
 
 import { AdminMembersPage as MockPage } from './AdminMembersPage.mock';

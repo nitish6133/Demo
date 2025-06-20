@@ -50,6 +50,7 @@ interface MemberFormData {
   status: 'active' | 'blocked';
   handicap: number;
   password?: string;
+  joinDate?: Date;
 }
 
 export function AdminMembersPage() {
@@ -86,7 +87,7 @@ export function AdminMembersPage() {
   const loadMembers = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await memberService.getAll();
+      const data = await memberService.getAll() as AdminMember[];
       setMembers(data);
     } catch (error) {
       console.error('Failed to load members:', error);
@@ -282,13 +283,30 @@ export function AdminMembersPage() {
   const handleSaveMember = async () => {
     try {
       if (editingMember) {
-        await memberService.update(editingMember.id, formData);
+        // For updates, only send the changed fields
+        const updateData: Partial<AdminMember> = {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          role: formData.role,
+          status: formData.status,
+          handicap: formData.handicap
+        };
+        await memberService.update!(editingMember.id, updateData);
         console.log('Member updated successfully');
       } else {
-        await memberService.create({
-          ...formData,
-          joinDate: new Date()
-        });
+        // For creation, convert form data to the expected format
+        const createData: Omit<AdminMember, 'id' | 'createdAt' | 'isActive'> = {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          role: formData.role,
+          status: formData.status,
+          handicap: formData.handicap,
+          joinDate: formData.joinDate || new Date(),
+          lastLogin: undefined
+        };
+        await memberService.create(createData);
         console.log('Member created successfully');
       }
       setShowMemberModal(false);
@@ -327,7 +345,7 @@ export function AdminMembersPage() {
     if (!selectedMember) return;
     
     try {
-      await memberService.resetPassword(selectedMember.id);
+      await memberService.resetPassword!(selectedMember.id);
       console.log(`Password reset to phone number: ${selectedMember.phone}`);
       setShowResetPasswordDialog(false);
       setSelectedMember(null);
@@ -345,7 +363,7 @@ export function AdminMembersPage() {
     if (!selectedMember) return;
     
     try {
-      await memberService.toggleStatus(selectedMember.id);
+      await memberService.toggleStatus!(selectedMember.id);
       const action = selectedMember.status === 'active' ? 'blocked' : 'unblocked';
       console.log(`Member ${action} successfully`);
       setShowToggleStatusDialog(false);
@@ -375,7 +393,7 @@ export function AdminMembersPage() {
     }
 
     try {
-      const result = await memberService.importFromCSV(csvData);
+      const result = await memberService.importFromCSV!(csvData);
       setImportResult(result);
       
       if (result.success > 0) {
