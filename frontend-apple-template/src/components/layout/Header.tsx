@@ -41,64 +41,67 @@ const Header: React.FC = () => {
   return (
     <>
       <motion.header
-        className={`fixed w-full z-50 transition-all duration-700 ${
+        className={`fixed w-full z-50 transition-all duration-500 ${
           scrolled
-            ? 'glass-header shadow-2xl border-b border-white/20'
+            ? 'glass-header shadow-lg'
             : 'bg-transparent'
         }`}
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 1, ease: [0.25, 0.46, 0.45, 0.94] }}
+        transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4 md:py-6">
             {/* Logo */}
-            <motion.div whileHover={{ scale: 1.05 }} transition={{ duration: 0.3 }}>
+            <motion.div whileHover={{ scale: 1.05 }} transition={{ duration: 0.2 }}>
               <AnimatedLink
                 to="/"
-                className="flex items-center space-x-3 text-2xl font-bold text-white"
+                className="flex items-center space-x-3 text-2xl font-semibold"
                 variant="glow"
               >
                 <motion.div
-                  className="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 via-purple-600 to-cyan-500 flex items-center justify-center"
+                  className="relative w-10 h-10 rounded-2xl glass flex items-center justify-center"
                   whileHover={{ rotate: 180 }}
-                  transition={{ duration: 0.6 }}
+                  transition={{ duration: 0.4 }}
                 >
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
                   >
-                    <Sparkles size={20} className="text-white" />
+                    <Sparkles size={20} className="text-gray-700" />
                   </motion.div>
                   <motion.div
-                    className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500 via-purple-600 to-cyan-500 blur-lg opacity-50"
-                    animate={{ scale: [1, 1.2, 1] }}
+                    className="absolute inset-0 rounded-2xl glass opacity-50"
+                    animate={{ scale: [1, 1.1, 1] }}
                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                   />
                 </motion.div>
-                <span className="gradient-text font-black tracking-tight">
+                <span className="gradient-text-subtle font-semibold tracking-tight">
                   {headerData?.title || 'Yensi'}
                 </span>
               </AnimatedLink>
             </motion.div>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center space-x-8">
+            <nav className="hidden md:flex items-center space-x-2">
               {headerData?.menu_items.map((item, index) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
                 >
                   <AnimatedLink
                     to={item.slug}
-                    className="relative text-sm font-medium text-slate-300 hover:text-white transition-all duration-300 px-4 py-2 rounded-xl group"
-                    variant="underline"
+                    className="relative text-sm font-medium px-4 py-2 rounded-xl transition-all duration-200 hover:bg-white/10 group"
+                    variant="scale"
                   >
-                    <span className="relative z-10">{item.label}</span>
-                    <motion.div className="absolute inset-0 glass rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <motion.div className="absolute -bottom-1 left-1/2 w-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 group-hover:w-full group-hover:left-0 transition-all duration-300" />
+                    <span className="relative z-10 text-gray-700 group-hover:text-gray-900">
+                      {item.label}
+                    </span>
+                    <motion.div 
+                      className="absolute inset-0 glass-subtle rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200" 
+                    />
                   </AnimatedLink>
                 </motion.div>
               ))}
@@ -107,10 +110,10 @@ const Header: React.FC = () => {
             {/* Mobile menu button */}
             <motion.button
               onClick={toggleMenu}
-              className="md:hidden p-3 rounded-2xl glass text-white relative overflow-hidden group"
+              className="md:hidden p-3 rounded-2xl glass relative overflow-hidden group"
               whileTap={{ scale: 0.95 }}
             >
-              <motion.div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <motion.div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
               <AnimatePresence mode="wait">
                 {isMenuOpen ? (
                   <motion.div
@@ -118,10 +121,10 @@ const Header: React.FC = () => {
                     initial={{ rotate: -90, opacity: 0 }}
                     animate={{ rotate: 0, opacity: 1 }}
                     exit={{ rotate: 90, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
+                    transition={{ duration: 0.2 }}
                     className="relative z-10"
                   >
-                    <X size={24} />
+                    <X size={24} className="text-gray-700" />
                   </motion.div>
                 ) : (
                   <motion.div
@@ -129,10 +132,10 @@ const Header: React.FC = () => {
                     initial={{ rotate: 90, opacity: 0 }}
                     animate={{ rotate: 0, opacity: 1 }}
                     exit={{ rotate: -90, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
+                    transition={{ duration: 0.2 }}
                     className="relative z-10"
                   >
-                    <Menu size={24} />
+                    <Menu size={24} className="text-gray-700" />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -147,21 +150,21 @@ const Header: React.FC = () => {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-              className="md:hidden glass-dark border-t border-white/10"
+              transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="md:hidden glass-strong border-t border-white/20"
             >
-              <div className="px-4 py-8 space-y-6">
+              <div className="px-4 py-6 space-y-4">
                 {headerData?.menu_items.map((item, index) => (
                   <motion.div
                     key={index}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.4, delay: index * 0.1 }}
+                    transition={{ duration: 0.3, delay: index * 0.1 }}
                   >
                     <div onClick={() => toggleMenu()}>
                       <AnimatedLink
                         to={item.slug}
-                        className="block py-4 px-6 text-lg font-medium text-slate-300 hover:text-white rounded-2xl glass hover:glass-card transition-all duration-300"
+                        className="block py-3 px-4 text-lg font-medium text-gray-700 hover:text-gray-900 rounded-xl glass-subtle hover:glass transition-all duration-200"
                         variant="scale"
                       >
                         {item.label}
@@ -175,16 +178,16 @@ const Header: React.FC = () => {
         </AnimatePresence>
       </motion.header>
 
-      {/* Enhanced floating particles background */}
+      {/* Floating particles background */}
       <div className="particles">
-        {Array.from({ length: 30 }).map((_, i) => (
+        {Array.from({ length: 20 }).map((_, i) => (
           <div
             key={i}
             className="particle"
             style={{
               left: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 8}s`,
-              animationDuration: `${8 + Math.random() * 6}s`,
+              animationDelay: `${Math.random() * 12}s`,
+              animationDuration: `${12 + Math.random() * 6}s`,
             }}
           />
         ))}

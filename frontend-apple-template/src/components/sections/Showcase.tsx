@@ -30,12 +30,12 @@ const Showcase: React.FC<ShowcaseProps> = ({
   return (
     <section
       ref={ref}
-      className="py-24 md:py-32 px-4 sm:px-6 lg:px-8 overflow-hidden relative bg-slate-900"
+      className="py-24 md:py-32 px-4 sm:px-6 lg:px-8 overflow-hidden relative"
     >
       {/* Background Elements */}
       <div className="absolute inset-0">
-        <div className={`absolute ${imagePosition === 'right' ? 'top-1/4 left-0' : 'top-1/4 right-0'} w-96 h-96 bg-blue-500/10 rounded-full blur-3xl`} />
-        <div className={`absolute ${imagePosition === 'right' ? 'bottom-1/4 right-1/4' : 'bottom-1/4 left-1/4'} w-96 h-96 bg-purple-500/10 rounded-full blur-3xl`} />
+        <div className={`absolute ${imagePosition === 'right' ? 'top-1/4 left-0' : 'top-1/4 right-0'} w-96 h-96 bg-white/5 rounded-full blur-3xl`} />
+        <div className={`absolute ${imagePosition === 'right' ? 'bottom-1/4 right-1/4' : 'bottom-1/4 left-1/4'} w-96 h-96 bg-white/5 rounded-full blur-3xl`} />
       </div>
 
       <div className="max-w-7xl mx-auto relative">
@@ -48,21 +48,21 @@ const Showcase: React.FC<ShowcaseProps> = ({
           >
             <div className="relative">
               <motion.div
-                className="absolute -inset-8 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-3xl blur-2xl"
+                className="absolute -inset-8 bg-white/10 rounded-3xl blur-2xl"
                 animate={inView ? { scale: [0.8, 1.1, 1] } : { scale: 0.8 }}
                 transition={{ duration: 2, ease: "easeOut" }}
               />
               <motion.div
-                className="relative bg-slate-900/80 backdrop-blur-lg rounded-3xl overflow-hidden cursor-pointer ring-1 ring-white/10"
+                className="relative glass-card rounded-3xl overflow-hidden cursor-pointer"
                 whileHover={{ scale: 1.02 }}
-                transition={{ duration: 0.4 }}
+                transition={{ duration: 0.3 }}
               >
                 <HoverImage
                   src={imageUrl}
                   alt={title}
                   className="w-full h-auto"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-white/20 to-transparent" />
               </motion.div>
             </div>
           </MotionDiv>
@@ -74,22 +74,24 @@ const Showcase: React.FC<ShowcaseProps> = ({
             delay={0.4}
           >
             <motion.h2
-              className="text-4xl md:text-5xl lg:text-6xl font-black mb-8 text-white"
+              className="text-4xl md:text-5xl lg:text-6xl font-bold mb-8 text-gray-800"
               initial={{ opacity: 0, y: 30 }}
               animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
               transition={{ duration: 0.8, delay: 0.4 }}
             >
-              <span className="gradient-text">{title}</span>
+              <span className="gradient-text-subtle">{title}</span>
             </motion.h2>
 
-            <motion.p
-              className="text-lg md:text-xl text-slate-400 mb-10 leading-relaxed"
+            <motion.div
+              className="glass-card p-8 rounded-3xl mb-10"
               initial={{ opacity: 0, y: 30 }}
               animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
               transition={{ duration: 0.8, delay: 0.6 }}
             >
-              {description}
-            </motion.p>
+              <p className="text-lg md:text-xl text-gray-600 leading-relaxed">
+                {description}
+              </p>
+            </motion.div>
 
             {buttonText && buttonLink && (
               <motion.div

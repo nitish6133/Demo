@@ -54,17 +54,17 @@ const Articles: React.FC = () => {
       <div className="flex justify-center items-center min-h-screen animated-bg">
         <div className="relative">
           <motion.div
-            className="w-20 h-20 border-4 border-blue-500/30 rounded-full"
+            className="w-20 h-20 glass rounded-full"
             animate={{ rotate: 360 }}
             transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
           />
           <motion.div
-            className="w-20 h-20 border-4 border-blue-500 border-t-transparent rounded-full absolute top-0 left-0"
+            className="w-20 h-20 glass-strong rounded-full absolute top-0 left-0"
             animate={{ rotate: -360 }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
           />
           <motion.div
-            className="absolute inset-0 rounded-full bg-blue-500/20 blur-xl"
+            className="absolute inset-0 rounded-full bg-white/20 blur-xl"
             animate={{ scale: [1, 1.2, 1] }}
             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
           />
@@ -76,8 +76,8 @@ const Articles: React.FC = () => {
   if (error) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 animated-bg min-h-screen">
-        <div className="glass-card p-8 rounded-3xl border border-red-500/20">
-          <p className="text-red-400 text-xl">{error}</p>
+        <div className="glass-card p-8 rounded-3xl border border-red-200">
+          <p className="text-red-600 text-xl">{error}</p>
         </div>
       </div>
     );
@@ -89,9 +89,9 @@ const Articles: React.FC = () => {
       <div className="relative py-32 md:py-40 overflow-hidden">
         {/* Background Elements */}
         <div className="absolute inset-0">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-cyan-500/15 rounded-full blur-2xl animate-pulse" />
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-white/5 rounded-full blur-2xl animate-pulse" />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative">
@@ -102,22 +102,24 @@ const Articles: React.FC = () => {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6 }}
             >
-              <BookOpen className="text-blue-400 mr-3" size={24} />
-              <span className="text-blue-300 font-semibold">Knowledge Hub</span>
+              <BookOpen className="text-gray-600 mr-3" size={24} />
+              <span className="text-gray-700 font-semibold">Knowledge Hub</span>
             </motion.div>
           </MotionDiv>
 
           <MotionDiv delay={0.2}>
-            <h1 className="text-display font-black mb-8 gradient-text">
+            <h1 className="text-display font-bold mb-8 gradient-text-subtle">
               Articles & Insights
             </h1>
           </MotionDiv>
 
           <MotionDiv delay={0.3}>
-            <p className="text-xl md:text-2xl text-slate-400 max-w-4xl mx-auto leading-relaxed font-light">
-              Discover cutting-edge insights, expert perspectives, and innovative solutions
-              that shape the future of technology and development.
-            </p>
+            <div className="glass-card p-8 rounded-3xl max-w-4xl mx-auto">
+              <p className="text-xl md:text-2xl text-gray-600 leading-relaxed font-light">
+                Discover cutting-edge insights, expert perspectives, and innovative solutions
+                that shape the future of technology and development.
+              </p>
+            </div>
           </MotionDiv>
         </div>
       </div>
@@ -129,7 +131,7 @@ const Articles: React.FC = () => {
             {/* Enhanced Search Bar */}
             <div className="relative w-full lg:w-96">
               <motion.div
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500"
                 whileHover={{ scale: 1.1 }}
               >
                 <Search size={24} />
@@ -139,25 +141,25 @@ const Articles: React.FC = () => {
                 placeholder="Search articles..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-14 pr-6 py-4 glass rounded-2xl text-white placeholder-slate-400 border border-white/10 focus:border-blue-500/50 focus:outline-none transition-all duration-300 text-lg"
+                className="w-full pl-14 pr-6 py-4 glass-card rounded-2xl text-gray-800 placeholder-gray-500 border border-white/20 focus:border-white/40 focus:outline-none transition-all duration-300 text-lg input-glass"
               />
               <motion.div
-                className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"
+                className="absolute inset-0 rounded-2xl bg-gradient-to-r from-white/10 to-white/5 opacity-0 focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"
               />
             </div>
 
             {/* Enhanced Category Filters */}
             {categories.length > 0 && (
               <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center text-slate-400 mr-2">
+                <div className="flex items-center text-gray-600 mr-2">
                   <Filter size={20} className="mr-2" />
                   <span className="font-medium">Filter:</span>
                 </div>
 
                 <motion.button
                   className={`px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeFilter === 'all'
-                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-2xl'
-                      : 'glass text-slate-300 hover:text-white border border-white/10 hover:border-white/30'
+                      ? 'btn-primary-glass'
+                      : 'glass text-gray-600 hover:text-gray-800 border border-white/20 hover:border-white/40'
                     }`}
                   onClick={() => setActiveFilter('all')}
                   whileHover={{ scale: 1.05 }}
@@ -170,8 +172,8 @@ const Articles: React.FC = () => {
                   <motion.button
                     key={index}
                     className={`px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeFilter === category
-                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-2xl'
-                        : 'glass text-slate-300 hover:text-white border border-white/10 hover:border-white/30'
+                        ? 'btn-primary-glass'
+                        : 'glass text-gray-600 hover:text-gray-800 border border-white/20 hover:border-white/40'
                       }`}
                     onClick={() => setActiveFilter(category)}
                     whileHover={{ scale: 1.05 }}
@@ -216,14 +218,14 @@ const Articles: React.FC = () => {
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                  className="w-16 h-16 mx-auto mb-6 text-slate-400"
+                  className="w-16 h-16 mx-auto mb-6 text-gray-400"
                 >
                   <Search size={64} />
                 </motion.div>
-                <p className="text-slate-400 text-2xl mb-6 font-medium">
+                <p className="text-gray-600 text-2xl mb-6 font-medium">
                   No articles found
                 </p>
-                <p className="text-slate-500 text-lg">
+                <p className="text-gray-500 text-lg">
                   Try adjusting your search or filter criteria to discover more content.
                 </p>
               </div>
@@ -270,13 +272,12 @@ const ArticleCard: React.FC<{ article: Article; index: number }> = ({ article, i
           whileInView={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4 }}
         >
-          <span className="text-blue-300 text-sm font-semibold flex items-center">
+          <span className="text-gray-700 text-sm font-semibold flex items-center">
             <Sparkles size={14} className="mr-2" />
             {category}
           </span>
         </motion.div>
       </div>
-
 
       <div className="p-8 flex-grow flex flex-col">
         <AnimatedLink
@@ -284,47 +285,47 @@ const ArticleCard: React.FC<{ article: Article; index: number }> = ({ article, i
           className="block mb-6"
           variant="scale"
         >
-          <h3 className="text-xl font-bold text-white mb-4 group-hover:gradient-text transition-all duration-300 line-clamp-2 leading-tight">
+          <h3 className="text-xl font-semibold text-gray-800 mb-4 group-hover:text-gray-900 transition-all duration-300 line-clamp-2 leading-tight">
             {article.title}
           </h3>
         </AnimatedLink>
 
-        <p className="text-slate-400 mb-8 line-clamp-3 flex-grow leading-relaxed text-base">
+        <p className="text-gray-600 mb-8 line-clamp-3 flex-grow leading-relaxed text-base">
           {article.description || 'Discover insights and expert perspectives in this comprehensive article...'}
         </p>
 
         {/* Enhanced metadata */}
-        <div className="flex items-center justify-between text-sm text-slate-500 mb-6 space-x-4">
+        <div className="flex items-center justify-between text-sm text-gray-500 mb-6 space-x-4">
           <div className="flex items-center glass px-3 py-2 rounded-full">
-            <Calendar size={16} className="mr-2 text-slate-300" />
-            <span className='text-slate-300'>{formattedDate}</span>
+            <Calendar size={16} className="mr-2 text-gray-400" />
+            <span className='text-gray-600'>{formattedDate}</span>
           </div>
 
           <div className="flex items-center glass px-3 py-2 rounded-full">
-            <Clock size={16} className="mr-2 text-slate-300" />
-            <span className='text-slate-300'>{readingTime} min</span>
+            <Clock size={16} className="mr-2 text-gray-400" />
+            <span className='text-gray-600'>{readingTime} min</span>
           </div>
         </div>
 
         {article.author && (
-          <div className="flex items-center text-sm text-slate-500 mb-6">
+          <div className="flex items-center text-sm text-gray-500 mb-6">
             <div className="flex items-center glass px-3 py-2 rounded-full">
-              <User size={16} className="mr-2 text-slate-300" />
-              <span className='text-slate-300'>{article.author.name}</span>
+              <User size={16} className="mr-2 text-gray-400" />
+              <span className='text-gray-600'>{article.author.name}</span>
             </div>
           </div>
         )}
 
         {/* Enhanced read more section */}
         <motion.div
-          className="pt-6 border-t border-white/10"
+          className="pt-6 border-t border-white/20"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.2 }}
         >
           <AnimatedLink
             to={`/articles/${article.slug}`}
-            className="inline-flex items-center text-blue-400 font-semibold group-hover:text-blue-300 transition-colors text-lg"
+            className="inline-flex items-center text-gray-600 font-semibold group-hover:text-gray-800 transition-colors text-lg"
             variant="underline"
           >
             Read Article
