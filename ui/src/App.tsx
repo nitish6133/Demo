@@ -7,6 +7,7 @@ import ScoreboardPage from './pages/ScoreboardPage';
 import HistoryPage from './pages/HistoryPage';
 import PlayerProfilePage from './pages/PlayerProfilePage';
 import TeamsPage from './pages/TeamsPage';
+import AdvancedMatchSettingsPage from './pages/AdvancedMatchSettingsPage';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/player/:playerId" element={<PlayerProfilePage />} />
           <Route path="/teams" element={<TeamsPage />} />
+          <Route path="/settings" element={<AdvancedMatchSettingsPage />} />
         </Routes>
         <FooterNav />
       </div>

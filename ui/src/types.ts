@@ -115,3 +115,11 @@ export interface CurrentBatsmen {
 export interface CurrentBowler {
   bowler: Player;
 }
+
+export interface MatchSettings {
+  playersPerTeam: number;
+  noBallReball: boolean;
+  noBallRun: number;
+  wideBallReball: boolean;
+  wideBallRun: number;
+}

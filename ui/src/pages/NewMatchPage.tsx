@@ -122,7 +122,15 @@ const NewMatchPage: React.FC = () => {
               type="submit"
               className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
             >
-              Start Match
+              Start match
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => navigate('/settings')}
+              className="w-full py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors mt-3"
+            >
+              Advanced settings
             </button>
           </form>
         </div>
