@@ -1,12 +1,14 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Upload, Database, Gem, ShoppingCart } from 'lucide-react';
+import { Upload, Database, Gem, ShoppingCart, CreditCard } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useCheckoutStore } from '../stores/checkoutStore';
 import Cart from './Cart';
 
 const Navigation: React.FC = () => {
   const location = useLocation();
   const { getTotalItems } = useCart();
+  const { getTotalItems: getCheckoutItems } = useCheckoutStore();
   const [isCartOpen, setIsCartOpen] = React.useState(false);
 
   const isActive = (path: string) => location.pathname === path;
@@ -48,6 +50,22 @@ const Navigation: React.FC = () => {
                 View Inventory
               </Link>
 
+              <Link
+                to="/checkout"
+                className={`inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  isActive('/checkout')
+                    ? 'bg-purple-100 text-purple-700 shadow-md'
+                    : 'text-gray-600 hover:text-purple-600 hover:bg-purple-50'
+                }`}
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                Razorpay Checkout
+                {getCheckoutItems() > 0 && (
+                  <span className="ml-2 bg-purple-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {getCheckoutItems()}
+                  </span>
+                )}
+              </Link>
               {/* Cart Button */}
               <button
                 onClick={() => setIsCartOpen(true)}

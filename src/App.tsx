@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AdminPage from './pages/AdminPage';
 import DataPage from './pages/DataPage';
+import CheckoutPage from './pages/CheckoutPage';
 import Navigation from './components/Navigation';
 import { CartProvider } from './context/CartContext';
 import { TableData } from './types';
@@ -32,6 +33,10 @@ function App() {
             <Route 
               path="/data" 
               element={<DataPage data={tableData} />} 
+            />
+            <Route 
+              path="/checkout" 
+              element={<CheckoutPage />} 
             />
           </Routes>
         </div>
