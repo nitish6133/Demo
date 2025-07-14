@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, ShoppingCart, Plus } from 'lucide-react';
 import { TableData } from '../types';
 import ImageModal from './ImageModal';
-import { useCart } from '../context/CartContext';
+import { useCartStore } from '../stores/cartStore';
 
 interface DataTableProps {
   data: TableData[];
@@ -15,7 +15,7 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
   const [sortKey, setSortKey] = useState<SortKey>('description');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [selectedImage, setSelectedImage] = useState<{ url: string; description: string } | null>(null);
-  const { addToCart } = useCart();
+  const { addItem } = useCartStore();
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -76,7 +76,7 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
     if (item.availability.toLowerCase().includes('out') || item.availability.toLowerCase().includes('unavailable')) {
       return; // Don't add out of stock items
     }
-    addToCart(item);
+    addItem(item);
   };
 
   const isOutOfStock = (availability: string) => availability.toLowerCase().includes('out') || availability.toLowerCase().includes('unavailable');
