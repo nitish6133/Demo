@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, X, Plus, Minus, Trash2, CreditCard } from 'lucide-react';
-import { useCart } from '../context/CartContext';
-import PaymentForm from './PaymentForm';
+import { useCartStore } from '../stores/cartStore';
+import { useAuthStore } from '../stores/authStore';
 
 interface CartProps {
   isOpen: boolean;
@@ -9,8 +10,9 @@ interface CartProps {
 }
 
 const Cart: React.FC<CartProps> = ({ isOpen, onClose }) => {
-  const { cartItems, updateQuantity, removeFromCart, getTotalPrice, getTotalItems } = useCart();
-  const [showPayment, setShowPayment] = useState(false);
+  const navigate = useNavigate();
+  const { items, updateQuantity, removeItem, getTotalPrice, getTotalItems } = useCartStore();
+  const { isAuthenticated } = useAuthStore();
 
   if (!isOpen) return null;
 
@@ -25,25 +27,14 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose }) => {
     return `$${numPrice.toFixed(2)}`;
   };
 
-  if (showPayment) {
-    return (
-      <div 
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-        onClick={handleBackdropClick}
-      >
-        <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-hidden shadow-2xl">
-          <PaymentForm 
-            amount={getTotalPrice()}
-            onSuccess={() => {
-              setShowPayment(false);
-              onClose();
-            }}
-            onCancel={() => setShowPayment(false)}
-          />
-        </div>
-      </div>
-    );
-  }
+  const handleCheckout = () => {
+    onClose();
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: { pathname: '/checkout' } } });
+    } else {
+      navigate('/checkout');
+    }
+  };
 
   return (
     <div 
@@ -67,7 +58,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose }) => {
 
         {/* Cart Items */}
         <div className="flex-1 overflow-y-auto p-4 max-h-[calc(100vh-200px)]">
-          {cartItems.length === 0 ? (
+          {items.length === 0 ? (
             <div className="text-center py-12">
               <ShoppingCart className="h-16 w-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Your cart is empty</h3>
@@ -75,7 +66,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose }) => {
             </div>
           ) : (
             <div className="space-y-4">
-              {cartItems.map((item) => (
+              {items.map((item) => (
                 <div key={item.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                   <div className="flex items-start space-x-3">
                     <img
@@ -113,7 +104,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose }) => {
                         </div>
                         
                         <button
-                          onClick={() => removeFromCart(item.id)}
+                          onClick={() => removeItem(item.id)}
                           className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors duration-200"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -128,7 +119,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Footer */}
-        {cartItems.length > 0 && (
+        {items.length > 0 && (
           <div className="border-t border-gray-200 p-4 bg-white">
             <div className="flex items-center justify-between mb-4">
               <span className="text-lg font-semibold text-gray-900">Total:</span>
@@ -138,11 +129,11 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose }) => {
             </div>
             
             <button
-              onClick={() => setShowPayment(true)}
+              onClick={handleCheckout}
               className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center"
             >
               <CreditCard className="h-5 w-5 mr-2" />
-              Proceed to Payment
+              {isAuthenticated ? 'Proceed to Checkout' : 'Login to Checkout'}
             </button>
           </div>
         )}

@@ -4,6 +4,9 @@ export interface TableData {
   price: string;
   availability: string;
   image: string;
+  category?: string;
+  fullDescription?: string;
+  thumbnails?: string[];
 }
 
 export interface CartItem extends TableData {
@@ -15,3 +18,5 @@ export interface PaymentIntent {
   client_secret: string;
   amount: number;
 }
+
+export type Category = 'Gold' | 'Silver' | 'Platinum' | 'Diamond' | 'All';
