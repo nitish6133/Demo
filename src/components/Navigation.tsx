@@ -1,15 +1,22 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Upload, Database, Gem, ShoppingCart } from 'lucide-react';
+import { Upload, Database, Gem, ShoppingCart, User, LogOut } from 'lucide-react';
 import { useCartStore } from '../stores/cartStore';
+import { useAuthStore } from '../stores/authStore';
 import Cart from './Cart';
 
 const Navigation: React.FC = () => {
   const location = useLocation();
   const { getTotalItems } = useCartStore();
+  const { user, logout } = useAuthStore();
   const [isCartOpen, setIsCartOpen] = React.useState(false);
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = '/'; // Redirect to homepage after logout
+  };
 
   return (
     <>
@@ -24,6 +31,7 @@ const Navigation: React.FC = () => {
             </div>
 
             <div className="flex space-x-4 items-center">
+              {/* Admin Navigation Links */}
               <Link
                 to="/admin"
                 className={`inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
@@ -61,6 +69,29 @@ const Navigation: React.FC = () => {
                   </span>
                 )}
               </button>
+
+              {/* User Info and Logout */}
+              {user && (
+                <div className="flex items-center space-x-3 ml-4 pl-4 border-l border-gray-200">
+                  <div className="flex items-center space-x-2">
+                    <User className="h-4 w-4 text-gray-600" />
+                    <span className="text-sm text-gray-700 font-medium">
+                      {user.firstName} {user.lastName}
+                    </span>
+                    <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
+                      {user.role}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 transition-all duration-200"
+                    title="Logout"
+                  >
+                    <LogOut className="h-4 w-4 mr-1" />
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
