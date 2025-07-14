@@ -1,6 +1,8 @@
 import React from 'react';
-import { Upload, FileSpreadsheet, AlertCircle, Gem } from 'lucide-react';
+import { Upload, FileSpreadsheet, AlertCircle, Gem, Database } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import FileUpload from '../components/FileUpload';
+import { useProductStore } from '../stores/productStore';
 import { TableData } from '../types';
 
 interface AdminPageProps {
@@ -8,6 +10,8 @@ interface AdminPageProps {
 }
 
 const AdminPage: React.FC<AdminPageProps> = ({ onDataParsed }) => {
+  const { products } = useProductStore();
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
@@ -24,6 +28,27 @@ const AdminPage: React.FC<AdminPageProps> = ({ onDataParsed }) => {
 
         {/* Content */}
         <div className="p-8">
+          {/* Current Inventory Status */}
+          {products.length > 0 && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Database className="h-5 w-5 text-green-600 mr-2" />
+                  <div>
+                    <h3 className="font-semibold text-green-900">Current Inventory</h3>
+                    <p className="text-green-700 text-sm">{products.length} jewelry items in database</p>
+                  </div>
+                </div>
+                <Link
+                  to="/data"
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
+                >
+                  View Inventory
+                </Link>
+              </div>
+            </div>
+          )}
+
           {/* Info Cards */}
           <div className="grid md:grid-cols-2 gap-6 mb-8">
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">

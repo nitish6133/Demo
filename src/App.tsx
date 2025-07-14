@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useAuthStore } from './stores/authStore';
+import { useProductStore } from './stores/productStore';
 import { TableData } from './types';
 
 // Components
@@ -17,16 +18,11 @@ import AdminPage from './pages/AdminPage';
 import DataPage from './pages/DataPage';
 
 function App() {
-  const [tableData, setTableData] = useState<TableData[]>([]);
+  const { products, addProducts } = useProductStore();
   const { user } = useAuthStore();
 
-  // Add unique IDs to imported data
   const handleDataParsed = (data: TableData[]) => {
-    const dataWithIds = data.map((item, index) => ({
-      ...item,
-      id: `jewelry-${Date.now()}-${index}`
-    }));
-    setTableData(dataWithIds);
+    addProducts(data);
   };
 
   const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/data');
@@ -43,8 +39,8 @@ function App() {
 
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<HomePage products={tableData} />} />
-          <Route path="/product/:id" element={<ProductDetailPage products={tableData} />} />
+          <Route path="/" element={<HomePage products={products} />} />
+          <Route path="/product/:id" element={<ProductDetailPage products={products} />} />
           <Route path="/login" element={<LoginPage />} />
           
           {/* Protected User Routes */}
@@ -70,7 +66,7 @@ function App() {
             path="/data" 
             element={
               <ProtectedRoute requiredRole="admin">
-                <DataPage data={tableData} />
+                <DataPage data={products} />
               </ProtectedRoute>
             } 
           />

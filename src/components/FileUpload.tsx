@@ -131,10 +131,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataParsed }) => {
       setSuccess(true);
       setIsLoading(false);
 
-      // Navigate to data page after 1.5 seconds
+      // Navigate to data page after 2 seconds to show success message
       setTimeout(() => {
         navigate('/data');
-      }, 1500);
+      }, 2000);
 
     } catch (err) {
       setError('Failed to process data. Please check your file format.');

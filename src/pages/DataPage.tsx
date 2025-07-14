@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Database, Search, Filter, Download, Gem } from 'lucide-react';
+import { Database, Search, Filter, Download, Gem, Trash2 } from 'lucide-react';
 import DataTable from '../components/DataTable';
+import { useProductStore } from '../stores/productStore';
 import { TableData } from '../types';
 
 interface DataPageProps {
@@ -10,6 +11,7 @@ interface DataPageProps {
 const DataPage: React.FC<DataPageProps> = ({ data }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterAvailability, setFilterAvailability] = useState('');
+  const { clearProducts } = useProductStore();
 
   const filteredData = data.filter(item => {
     const matchesSearch = item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -19,6 +21,12 @@ const DataPage: React.FC<DataPageProps> = ({ data }) => {
   });
 
   const availabilityOptions = [...new Set(data.map(item => item.availability))];
+
+  const handleClearAllProducts = () => {
+    if (window.confirm('Are you sure you want to clear all jewelry products? This action cannot be undone.')) {
+      clearProducts();
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -34,10 +42,22 @@ const DataPage: React.FC<DataPageProps> = ({ data }) => {
               </div>
             </div>
             
-            <button className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center">
-              <Download className="h-4 w-4 mr-2" />
-              Export Inventory
-            </button>
+            <div className="flex space-x-3">
+              <button className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center">
+                <Download className="h-4 w-4 mr-2" />
+                Export Inventory
+              </button>
+              
+              {data.length > 0 && (
+                <button 
+                  onClick={handleClearAllProducts}
+                  className="bg-red-500/80 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear All
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
