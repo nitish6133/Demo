@@ -1,12 +1,12 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Upload, Database, Gem, ShoppingCart } from 'lucide-react';
-import { useCart } from '../context/CartContext';
+import { useCartStore } from '../stores/cartStore';
 import Cart from './Cart';
 
 const Navigation: React.FC = () => {
   const location = useLocation();
-  const { getTotalItems } = useCart();
+  const { getTotalItems } = useCartStore();
   const [isCartOpen, setIsCartOpen] = React.useState(false);
 
   const isActive = (path: string) => location.pathname === path;
