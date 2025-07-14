@@ -53,6 +53,22 @@ export class ProductService {
     const response = await apiClient.get<ApiResponse<Product[]>>(`/products/${productId}/recommendations`);
     return response.data;
   }
+
+  async importProducts(file: File): Promise<ImportResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await apiClient.upload<ApiResponse<ImportResult>>('/products/import', formData);
+    return response.data;
+  }
+
+  async validateImportFile(file: File): Promise<{ valid: boolean; errors: string[] }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await apiClient.upload<ApiResponse<{ valid: boolean; errors: string[] }>>('/products/validate-import', formData);
+    return response.data;
+  }
 }
 
 export const productService = new ProductService();

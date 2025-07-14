@@ -4,6 +4,23 @@ export * from './Order';
 export * from './Payment';
 export * from './UploadedImage';
 
+// Product Import Types
+export interface TableData {
+  id: string;
+  description: string;
+  price: string;
+  availability: string;
+  image: string;
+}
+
+export interface ImportResult {
+  success: boolean;
+  message: string;
+  imported: number;
+  failed: number;
+  errors?: string[];
+}
+
 // Common API response types
 export interface ApiResponse<T> {
   success: boolean;

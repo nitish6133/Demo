@@ -7,6 +7,7 @@
 - **File Storage**: AWS S3 or local storage
 - **Image Processing**: OpenCV, PIL, or similar
 - **Payment**: Stripe/Razorpay integration
+- **File Processing**: pandas, openpyxl for Excel/CSV handling
 
 ## Database Schema (MongoDB Collections)
 
@@ -154,6 +155,23 @@
 }
 ```
 
+### 7. ImportLogs Collection
+```javascript
+{
+  _id: ObjectId,
+  userId: ObjectId,
+  fileName: String,
+  fileSize: Number,
+  totalRows: Number,
+  successfulImports: Number,
+  failedImports: Number,
+  errors: [String],
+  status: String, // 'processing', 'completed', 'failed'
+  importedAt: Date,
+  processingTime: Number // in milliseconds
+}
+```
+
 ## API Endpoints
 
 ### Authentication Endpoints
@@ -177,6 +195,9 @@ GET /api/products/category/{category}
 GET /api/products/featured
 GET /api/products/search?q={query}
 GET /api/products/{id}/recommendations
+POST /api/products/import
+POST /api/products/validate-import
+GET /api/products/import-history
 ```
 
 ### Order Endpoints
@@ -212,6 +233,22 @@ PUT /api/try-on/results/{id}
 DELETE /api/try-on/results/{id}
 POST /api/try-on/results/{id}/save
 POST /api/try-on/results/{id}/share
+```
+
+### Product Import Endpoints
+```
+POST /api/products/import
+  - Accepts multipart/form-data with file upload
+  - Supports CSV and XLSX files
+  - Returns import status and results
+
+POST /api/products/validate-import
+  - Validates file format and required columns
+  - Returns validation errors without importing
+
+GET /api/products/import-history
+  - Returns list of previous import attempts
+  - Includes success/failure statistics
 ```
 
 ## Key Features to Implement
@@ -256,7 +293,15 @@ POST /api/try-on/results/{id}/share
 - Multiple image sizes generation
 - Secure file access
 
-### 7. Security Features
+### 7. Bulk Product Import System
+- CSV/Excel file upload and validation
+- Batch processing of product data
+- Error handling and reporting
+- Import history and logging
+- Data transformation and mapping
+- Duplicate detection and handling
+
+### 8. Security Features
 - Input validation and sanitization
 - Rate limiting
 - CORS configuration
@@ -296,6 +341,25 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 CORS_ORIGINS=http://localhost:5173
 ```
 
+## Product Import File Format
+
+### Required CSV/Excel Columns:
+```
+description (required) - Product name/description
+price (required) - Price in ₹ format (e.g., "₹299999")
+availability (required) - Stock status (e.g., "In Stock", "Out of Stock")
+image (required) - Image URL
+category (optional) - Product category (Silver, Diamond, Platinum, Gold)
+specifications (optional) - Product specifications
+```
+
+### Example CSV Format:
+```csv
+description,price,availability,image,category,specifications
+"Diamond Solitaire Ring 1.5ct","₹299999","In Stock","https://example.com/ring.jpg","Diamond","18k White Gold, 1.5ct Diamond"
+"Gold Pearl Necklace","₹89999","Limited Stock","https://example.com/necklace.jpg","Gold","22k Gold, Freshwater Pearls"
+```
+
 ## Dependencies (requirements.txt)
 ```
 fastapi==0.104.1
@@ -313,6 +377,241 @@ razorpay==1.4.1
 python-dotenv==1.0.0
 email-validator==2.1.0
 aiofiles==23.2.1
+pandas==2.1.3
+openpyxl==3.1.2
+xlrd==2.0.1
+```
+
+## FastAPI Implementation for Product Import
+
+### 1. File Upload Endpoint
+```python
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
+from fastapi.responses import JSONResponse
+import pandas as pd
+import io
+from typing import List, Dict, Any
+
+@app.post("/api/products/import")
+async def import_products(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    # Validate file type
+    if not file.filename.endswith(('.csv', '.xlsx')):
+        raise HTTPException(status_code=400, detail="Only CSV and XLSX files are supported")
+    
+    try:
+        # Read file content
+        content = await file.read()
+        
+        # Parse based on file type
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(io.StringIO(content.decode('utf-8')))
+        else:
+            df = pd.read_excel(io.BytesIO(content))
+        
+        # Validate required columns
+        required_columns = ['description', 'price', 'availability', 'image']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        
+        if missing_columns:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Missing required columns: {', '.join(missing_columns)}"
+            )
+        
+        # Process and import products
+        import_result = await process_product_import(df, current_user.id)
+        
+        # Log import attempt
+        await log_import_attempt(
+            user_id=current_user.id,
+            filename=file.filename,
+            file_size=len(content),
+            result=import_result
+        )
+        
+        return JSONResponse(content={
+            "success": True,
+            "data": import_result
+        })
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def process_product_import(df: pd.DataFrame, user_id: str) -> Dict[str, Any]:
+    successful_imports = 0
+    failed_imports = 0
+    errors = []
+    
+    for index, row in df.iterrows():
+        try:
+            # Transform data
+            product_data = {
+                "name": row['description'],
+                "description": row['description'],
+                "price": parse_price(row['price']),
+                "inStock": parse_availability(row['availability']),
+                "images": [row['image']] if pd.notna(row['image']) else [],
+                "category": row.get('category', 'Other'),
+                "specifications": parse_specifications(row.get('specifications', '')),
+                "preorderAvailable": False,
+                "featured": False,
+                "rating": 0,
+                "reviews": 0,
+                "createdAt": datetime.utcnow(),
+                "updatedAt": datetime.utcnow()
+            }
+            
+            # Insert into database
+            result = await products_collection.insert_one(product_data)
+            successful_imports += 1
+            
+        except Exception as e:
+            failed_imports += 1
+            errors.append(f"Row {index + 1}: {str(e)}")
+    
+    return {
+        "imported": successful_imports,
+        "failed": failed_imports,
+        "errors": errors,
+        "message": f"Successfully imported {successful_imports} products. {failed_imports} failed."
+    }
+
+def parse_price(price_str: str) -> float:
+    """Parse price string and convert to float"""
+    if pd.isna(price_str):
+        raise ValueError("Price is required")
+    
+    # Remove currency symbols and convert to float
+    price_clean = str(price_str).replace('₹', '').replace(',', '').strip()
+    return float(price_clean)
+
+def parse_availability(availability_str: str) -> bool:
+    """Parse availability string and return boolean"""
+    if pd.isna(availability_str):
+        return False
+    
+    availability_lower = str(availability_str).lower()
+    return 'in stock' in availability_lower or 'available' in availability_lower
+
+def parse_specifications(spec_str: str) -> Dict[str, str]:
+    """Parse specifications string into dictionary"""
+    if pd.isna(spec_str) or not spec_str:
+        return {}
+    
+    specs = {}
+    # Simple parsing - can be enhanced based on format
+    parts = str(spec_str).split(',')
+    for part in parts:
+        if ':' in part:
+            key, value = part.split(':', 1)
+            specs[key.strip()] = value.strip()
+        else:
+            specs['material'] = part.strip()
+    
+    return specs
+```
+
+### 2. File Validation Endpoint
+```python
+@app.post("/api/products/validate-import")
+async def validate_import_file(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        content = await file.read()
+        
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(io.StringIO(content.decode('utf-8')))
+        else:
+            df = pd.read_excel(io.BytesIO(content))
+        
+        errors = []
+        
+        # Check required columns
+        required_columns = ['description', 'price', 'availability', 'image']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        
+        if missing_columns:
+            errors.append(f"Missing required columns: {', '.join(missing_columns)}")
+        
+        # Validate data types and formats
+        for index, row in df.iterrows():
+            if pd.isna(row.get('description')):
+                errors.append(f"Row {index + 1}: Description is required")
+            
+            if pd.isna(row.get('price')):
+                errors.append(f"Row {index + 1}: Price is required")
+            else:
+                try:
+                    parse_price(row['price'])
+                except ValueError as e:
+                    errors.append(f"Row {index + 1}: Invalid price format")
+        
+        return JSONResponse(content={
+            "success": True,
+            "data": {
+                "valid": len(errors) == 0,
+                "errors": errors
+            }
+        })
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+```
+
+### 3. Import History Endpoint
+```python
+@app.get("/api/products/import-history")
+async def get_import_history(
+    current_user: User = Depends(get_current_user),
+    skip: int = 0,
+    limit: int = 20
+):
+    try:
+        cursor = import_logs_collection.find(
+            {"userId": ObjectId(current_user.id)}
+        ).sort("importedAt", -1).skip(skip).limit(limit)
+        
+        import_logs = await cursor.to_list(length=limit)
+        
+        # Convert ObjectId to string for JSON serialization
+        for log in import_logs:
+            log["_id"] = str(log["_id"])
+            log["userId"] = str(log["userId"])
+        
+        return JSONResponse(content={
+            "success": True,
+            "data": import_logs
+        })
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def log_import_attempt(
+    user_id: str,
+    filename: str,
+    file_size: int,
+    result: Dict[str, Any]
+):
+    """Log import attempt to database"""
+    log_data = {
+        "userId": ObjectId(user_id),
+        "fileName": filename,
+        "fileSize": file_size,
+        "totalRows": result.get("imported", 0) + result.get("failed", 0),
+        "successfulImports": result.get("imported", 0),
+        "failedImports": result.get("failed", 0),
+        "errors": result.get("errors", []),
+        "status": "completed" if result.get("failed", 0) == 0 else "partial",
+        "importedAt": datetime.utcnow(),
+        "processingTime": 0  # Can be calculated if needed
+    }
+    
+    await import_logs_collection.insert_one(log_data)
 ```
 
 ## Deployment Considerations
@@ -324,3 +623,5 @@ aiofiles==23.2.1
 - Implement logging and monitoring
 - Set up CI/CD pipeline
 - Configure SSL certificates
+- Set up file upload limits and security
+- Configure background job processing for large imports
