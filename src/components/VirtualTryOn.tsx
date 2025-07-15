@@ -368,6 +368,10 @@ const VirtualTryOn: React.FC<VirtualTryOnProps> = ({ productImage, productName, 
     }
   }, [jewelryPosition, renderComposite]);
 
+  const renderCompositeWithBackground = () => {
+    renderComposite();
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-2xl max-w-6xl mx-auto overflow-hidden">
       {/* Header */}
