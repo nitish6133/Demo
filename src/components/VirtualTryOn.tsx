@@ -23,8 +23,6 @@ const VirtualTryOn: React.FC<VirtualTryOnProps> = ({ productImage, productName, 
   const [faceData, setFaceData] = useState<FaceDetectionResult | null>(null);
   const [handData, setHandData] = useState<HandDetectionResult[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [showManualControls, setShowManualControls] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
