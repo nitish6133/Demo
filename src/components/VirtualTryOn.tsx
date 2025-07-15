@@ -500,7 +500,7 @@ const VirtualTryOn: React.FC<VirtualTryOnProps> = ({ productImage, productName, 
                     src={productImage}
                     alt={productName}
                     className="hidden"
-                    onLoad={renderComposite}
+                    onLoad={renderCompositeWithBackground}
                   />
 
                   {/* Drag Instruction Overlay */}
