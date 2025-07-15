@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { TableData } from '../types';
 import { useCartStore } from '../stores/cartStore';
 import TryOnFeature from '../components/TryOnFeature';
+import VirtualTryOnButton from '../components/VirtualTryOnButton';
 
 interface ProductDetailPageProps {
   products: TableData[];
