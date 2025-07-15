@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Upload, Camera, X, RotateCcw, Download, Loader, AlertCircle, CheckCircle } from 'lucide-react';
+import { Upload, Camera, X, RotateCcw, Download, Loader, AlertCircle, CheckCircle, Move, ZoomIn, ZoomOut, RotateCw } from 'lucide-react';
 import { detectFace, detectHands, getJewelryType, FaceDetectionResult, HandDetectionResult } from '../utils/faceDetection';
 
 interface VirtualTryOnProps {
@@ -24,6 +24,7 @@ const VirtualTryOn: React.FC<VirtualTryOnProps> = ({ productImage, productName, 
   const [handData, setHandData] = useState<HandDetectionResult[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [showManualControls, setShowManualControls] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -81,11 +82,10 @@ const VirtualTryOn: React.FC<VirtualTryOnProps> = ({ productImage, productName, 
           position = {
             x: face.landmarks.neckCenter.x,
             y: face.landmarks.neckCenter.y,
-            scale: Math.min(face.width / 300, 1.5), // Scale based on face size
+            scale: Math.min(face.width / 300, 1.5),
             rotation: 0
           };
         } else {
-          // Fallback position
           position = {
             x: imageElement.width * 0.5,
             y: imageElement.height * 0.65,
@@ -98,7 +98,6 @@ const VirtualTryOn: React.FC<VirtualTryOnProps> = ({ productImage, productName, 
         setFaceData(face);
         
         if (face && face.landmarks) {
-          // Position at left ear (we'll show both earrings)
           position = {
             x: face.landmarks.leftEar.x,
             y: face.landmarks.leftEar.y,
@@ -118,7 +117,6 @@ const VirtualTryOn: React.FC<VirtualTryOnProps> = ({ productImage, productName, 
         setHandData(hands);
         
         if (hands.length > 0 && hands[0].fingers) {
-          // Position on ring finger
           const ringFinger = hands[0].fingers[0];
           position = {
             x: ringFinger.x,
@@ -135,7 +133,6 @@ const VirtualTryOn: React.FC<VirtualTryOnProps> = ({ productImage, productName, 
           };
         }
       } else {
-        // Default positioning for other jewelry types
         position = {
           x: imageElement.width * 0.5,
           y: imageElement.height * 0.5,
@@ -146,8 +143,8 @@ const VirtualTryOn: React.FC<VirtualTryOnProps> = ({ productImage, productName, 
 
       setJewelryPosition(position);
       setIsProcessing(false);
+      setShowManualControls(true);
       
-      // Render the composite image
       setTimeout(() => renderComposite(), 100);
     } catch (err) {
       setError('Failed to detect features in the image');
@@ -167,32 +164,21 @@ const VirtualTryOn: React.FC<VirtualTryOnProps> = ({ productImage, productName, 
     const userImg = userImageRef.current;
     const jewelryImg = jewelryImageRef.current;
 
-    // Set canvas size to match user image
     canvas.width = userImg.naturalWidth;
     canvas.height = userImg.naturalHeight;
 
-    // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Draw user image
     ctx.drawImage(userImg, 0, 0);
 
-    // Calculate jewelry dimensions
     const jewelryWidth = jewelryImg.naturalWidth * jewelryPosition.scale;
     const jewelryHeight = jewelryImg.naturalHeight * jewelryPosition.scale;
 
-    // Save context for transformations
     ctx.save();
-
-    // Apply transformations
     ctx.translate(jewelryPosition.x, jewelryPosition.y);
     ctx.rotate((jewelryPosition.rotation * Math.PI) / 180);
-
-    // Apply blend mode for realistic appearance
     ctx.globalCompositeOperation = 'multiply';
     ctx.globalAlpha = 0.8;
 
-    // Draw jewelry
     ctx.drawImage(
       jewelryImg,
       -jewelryWidth / 2,
@@ -201,13 +187,12 @@ const VirtualTryOn: React.FC<VirtualTryOnProps> = ({ productImage, productName, 
       jewelryHeight
     );
 
-    // Draw second earring if it's earrings
     if (jewelryType === 'earrings' && faceData?.landmarks) {
       ctx.translate(
         faceData.landmarks.rightEar.x - jewelryPosition.x,
         faceData.landmarks.rightEar.y - jewelryPosition.y
       );
-      ctx.scale(-1, 1); // Mirror for right ear
+      ctx.scale(-1, 1);
       ctx.drawImage(
         jewelryImg,
         -jewelryWidth / 2,
@@ -217,7 +202,6 @@ const VirtualTryOn: React.FC<VirtualTryOnProps> = ({ productImage, productName, 
       );
     }
 
-    // Restore context
     ctx.restore();
   }, [jewelryPosition, faceData, jewelryType]);
 
@@ -265,6 +249,76 @@ const VirtualTryOn: React.FC<VirtualTryOnProps> = ({ productImage, productName, 
     setIsDragging(false);
   };
 
+  // Touch event handlers for mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!jewelryPosition) return;
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const touch = e.touches[0];
+    const touchX = (touch.clientX - rect.left) * scaleX;
+    const touchY = (touch.clientY - rect.top) * scaleY;
+
+    setIsDragging(true);
+    setDragOffset({
+      x: touchX - jewelryPosition.x,
+      y: touchY - jewelryPosition.y
+    });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault();
+    if (!isDragging || !jewelryPosition) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const touch = e.touches[0];
+    const touchX = (touch.clientX - rect.left) * scaleX;
+    const touchY = (touch.clientY - rect.top) * scaleY;
+
+    setJewelryPosition({
+      ...jewelryPosition,
+      x: touchX - dragOffset.x,
+      y: touchY - dragOffset.y
+    });
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
+  // Manual adjustment functions
+  const moveJewelry = (direction: 'up' | 'down' | 'left' | 'right', amount: number = 10) => {
+    if (!jewelryPosition) return;
+    
+    const newPosition = { ...jewelryPosition };
+    switch (direction) {
+      case 'up':
+        newPosition.y -= amount;
+        break;
+      case 'down':
+        newPosition.y += amount;
+        break;
+      case 'left':
+        newPosition.x -= amount;
+        break;
+      case 'right':
+        newPosition.x += amount;
+        break;
+    }
+    setJewelryPosition(newPosition);
+  };
+
   const adjustScale = (delta: number) => {
     if (!jewelryPosition) return;
     
@@ -304,12 +358,12 @@ const VirtualTryOn: React.FC<VirtualTryOnProps> = ({ productImage, productName, 
     setHandData([]);
     setError(null);
     setIsProcessing(false);
+    setShowManualControls(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  // Re-render when jewelry position changes
   useEffect(() => {
     if (jewelryPosition) {
       renderComposite();
@@ -317,7 +371,7 @@ const VirtualTryOn: React.FC<VirtualTryOnProps> = ({ productImage, productName, 
   }, [jewelryPosition, renderComposite]);
 
   return (
-    <div className="bg-white rounded-xl shadow-2xl max-w-4xl mx-auto overflow-hidden">
+    <div className="bg-white rounded-xl shadow-2xl max-w-6xl mx-auto overflow-hidden">
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6">
         <div className="flex items-center justify-between">
@@ -411,23 +465,26 @@ const VirtualTryOn: React.FC<VirtualTryOnProps> = ({ productImage, productName, 
                 <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-0.5" />
                 <div>
                   <h4 className="font-semibold text-green-900">Try-On Ready!</h4>
-                  <p className="text-green-700 text-sm">Drag the jewelry to adjust position, or use the controls below.</p>
+                  <p className="text-green-700 text-sm">Use the controls below to perfectly position your jewelry. Drag on the image or use the manual controls.</p>
                 </div>
               </div>
             )}
 
             {/* Canvas and Controls */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
               {/* Canvas Area */}
-              <div className="lg:col-span-2">
+              <div className="xl:col-span-3">
                 <div className="relative bg-gray-100 rounded-lg overflow-hidden">
                   <canvas
                     ref={canvasRef}
-                    className="w-full h-auto cursor-move"
+                    className="w-full h-auto cursor-move touch-none"
                     onMouseDown={handleMouseDown}
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
                     onMouseLeave={handleMouseUp}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
                   />
                   
                   {/* Hidden images for canvas rendering */}
@@ -445,83 +502,217 @@ const VirtualTryOn: React.FC<VirtualTryOnProps> = ({ productImage, productName, 
                     className="hidden"
                     onLoad={renderComposite}
                   />
+
+                  {/* Drag Instruction Overlay */}
+                  {jewelryPosition && (
+                    <div className="absolute top-4 left-4 bg-black/70 text-white px-3 py-2 rounded-lg text-sm">
+                      <Move className="h-4 w-4 inline mr-1" />
+                      Drag to move jewelry
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Controls */}
-              <div className="space-y-4">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-gray-900 mb-4">Adjust Position</h3>
-                  
-                  {/* Scale Controls */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Size</label>
-                    <div className="flex space-x-2">
+              {/* Enhanced Controls */}
+              {showManualControls && (
+                <div className="space-y-6">
+                  {/* Position Controls */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
+                      <Move className="h-4 w-4 mr-2" />
+                      Position
+                    </h3>
+                    
+                    {/* Directional Controls */}
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      <div></div>
                       <button
-                        onClick={() => adjustScale(-0.1)}
-                        className="px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm transition-colors duration-200"
+                        onClick={() => moveJewelry('up', 20)}
+                        className="p-3 bg-white hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors duration-200 flex items-center justify-center"
+                        title="Move Up"
                       >
-                        Smaller
+                        ↑
+                      </button>
+                      <div></div>
+                      
+                      <button
+                        onClick={() => moveJewelry('left', 20)}
+                        className="p-3 bg-white hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors duration-200 flex items-center justify-center"
+                        title="Move Left"
+                      >
+                        ←
                       </button>
                       <button
-                        onClick={() => adjustScale(0.1)}
-                        className="px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm transition-colors duration-200"
+                        onClick={resetPosition}
+                        disabled={isProcessing}
+                        className="p-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg transition-colors duration-200 flex items-center justify-center text-xs"
+                        title="Reset Position"
                       >
-                        Larger
+                        <RotateCcw className="h-3 w-3" />
                       </button>
+                      <button
+                        onClick={() => moveJewelry('right', 20)}
+                        className="p-3 bg-white hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors duration-200 flex items-center justify-center"
+                        title="Move Right"
+                      >
+                        →
+                      </button>
+                      
+                      <div></div>
+                      <button
+                        onClick={() => moveJewelry('down', 20)}
+                        className="p-3 bg-white hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors duration-200 flex items-center justify-center"
+                        title="Move Down"
+                      >
+                        ↓
+                      </button>
+                      <div></div>
+                    </div>
+
+                    {/* Fine Position Controls */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => moveJewelry('up', 5)}
+                        className="px-3 py-2 bg-white hover:bg-gray-100 rounded text-xs border border-gray-200 transition-colors duration-200"
+                      >
+                        Fine ↑
+                      </button>
+                      <button
+                        onClick={() => moveJewelry('down', 5)}
+                        className="px-3 py-2 bg-white hover:bg-gray-100 rounded text-xs border border-gray-200 transition-colors duration-200"
+                      >
+                        Fine ↓
+                      </button>
+                      <button
+                        onClick={() => moveJewelry('left', 5)}
+                        className="px-3 py-2 bg-white hover:bg-gray-100 rounded text-xs border border-gray-200 transition-colors duration-200"
+                      >
+                        Fine ←
+                      </button>
+                      <button
+                        onClick={() => moveJewelry('right', 5)}
+                        className="px-3 py-2 bg-white hover:bg-gray-100 rounded text-xs border border-gray-200 transition-colors duration-200"
+                      >
+                        Fine →
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Size Controls */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
+                      <ZoomIn className="h-4 w-4 mr-2" />
+                      Size
+                    </h3>
+                    
+                    <div className="space-y-2">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => adjustScale(-0.2)}
+                          className="flex-1 px-3 py-2 bg-white hover:bg-gray-100 rounded text-sm border border-gray-200 transition-colors duration-200 flex items-center justify-center"
+                        >
+                          <ZoomOut className="h-4 w-4 mr-1" />
+                          Much Smaller
+                        </button>
+                        <button
+                          onClick={() => adjustScale(0.2)}
+                          className="flex-1 px-3 py-2 bg-white hover:bg-gray-100 rounded text-sm border border-gray-200 transition-colors duration-200 flex items-center justify-center"
+                        >
+                          <ZoomIn className="h-4 w-4 mr-1" />
+                          Much Larger
+                        </button>
+                      </div>
+                      
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => adjustScale(-0.05)}
+                          className="flex-1 px-3 py-2 bg-white hover:bg-gray-100 rounded text-xs border border-gray-200 transition-colors duration-200"
+                        >
+                          Fine -
+                        </button>
+                        <button
+                          onClick={() => adjustScale(0.05)}
+                          className="flex-1 px-3 py-2 bg-white hover:bg-gray-100 rounded text-xs border border-gray-200 transition-colors duration-200"
+                        >
+                          Fine +
+                        </button>
+                      </div>
+
+                      {jewelryPosition && (
+                        <div className="text-center text-xs text-gray-600 mt-2">
+                          Scale: {(jewelryPosition.scale * 100).toFixed(0)}%
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Rotation Controls */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Rotation</label>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => adjustRotation(-15)}
-                        className="px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm transition-colors duration-200"
-                      >
-                        ↺ Left
-                      </button>
-                      <button
-                        onClick={() => adjustRotation(15)}
-                        className="px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm transition-colors duration-200"
-                      >
-                        ↻ Right
-                      </button>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
+                      <RotateCw className="h-4 w-4 mr-2" />
+                      Rotation
+                    </h3>
+                    
+                    <div className="space-y-2">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => adjustRotation(-45)}
+                          className="flex-1 px-3 py-2 bg-white hover:bg-gray-100 rounded text-sm border border-gray-200 transition-colors duration-200"
+                        >
+                          ↺ -45°
+                        </button>
+                        <button
+                          onClick={() => adjustRotation(45)}
+                          className="flex-1 px-3 py-2 bg-white hover:bg-gray-100 rounded text-sm border border-gray-200 transition-colors duration-200"
+                        >
+                          ↻ +45°
+                        </button>
+                      </div>
+                      
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => adjustRotation(-5)}
+                          className="flex-1 px-3 py-2 bg-white hover:bg-gray-100 rounded text-xs border border-gray-200 transition-colors duration-200"
+                        >
+                          Fine ↺
+                        </button>
+                        <button
+                          onClick={() => adjustRotation(5)}
+                          className="flex-1 px-3 py-2 bg-white hover:bg-gray-100 rounded text-xs border border-gray-200 transition-colors duration-200"
+                        >
+                          Fine ↻
+                        </button>
+                      </div>
+
+                      {jewelryPosition && (
+                        <div className="text-center text-xs text-gray-600 mt-2">
+                          Angle: {jewelryPosition.rotation.toFixed(0)}°
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Reset Button */}
-                  <button
-                    onClick={resetPosition}
-                    disabled={isProcessing}
-                    className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center"
-                  >
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Reset Position
-                  </button>
+                  {/* Action Buttons */}
+                  <div className="space-y-3">
+                    <button
+                      onClick={downloadImage}
+                      disabled={!jewelryPosition}
+                      className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-3 px-4 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Image
+                    </button>
+                    
+                    <button
+                      onClick={resetTryOn}
+                      className="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Try Different Photo
+                    </button>
+                  </div>
                 </div>
-
-                {/* Action Buttons */}
-                <div className="space-y-3">
-                  <button
-                    onClick={downloadImage}
-                    disabled={!jewelryPosition}
-                    className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-3 px-4 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download Image
-                  </button>
-                  
-                  <button
-                    onClick={resetTryOn}
-                    className="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center"
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Try Different Photo
-                  </button>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         )}
