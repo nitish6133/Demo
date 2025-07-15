@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Eye } from 'lucide-react';
+import { ShoppingCart, Eye, Camera } from 'lucide-react';
 import { TableData } from '../types';
 import { useCartStore } from '../stores/cartStore';
+import VirtualTryOnButton from './VirtualTryOnButton';
 
 interface ProductCardProps {
   product: TableData;
@@ -87,6 +88,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
           {/* Actions */}
           <div className="flex space-x-2">
+            <VirtualTryOnButton
+              productImage={product.image}
+              productName={product.description}
+              className="flex-1"
+            />
             <button
               onClick={handleAddToCart}
               disabled={isOutOfStock(product.availability)}
@@ -97,7 +103,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               }`}
             >
               <ShoppingCart className="h-4 w-4 mr-1" />
-              {isOutOfStock(product.availability) ? 'Out of Stock' : 'Add to Cart'}
+              {isOutOfStock(product.availability) ? 'Out of Stock' : 'Add'}
             </button>
           </div>
         </div>

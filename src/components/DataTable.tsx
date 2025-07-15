@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, ShoppingCart, Plus } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, ShoppingCart, Plus, Camera } from 'lucide-react';
 import { TableData } from '../types';
 import ImageModal from './ImageModal';
 import { useCartStore } from '../stores/cartStore';
+import VirtualTryOnButton from './VirtualTryOnButton';
 
 interface DataTableProps {
   data: TableData[];
@@ -172,23 +173,30 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
                 )}
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                <button
-                  onClick={() => handleAddToCart(item)}
-                  disabled={isOutOfStock(item.availability)}
-                  className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    isOutOfStock(item.availability)
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-purple-600 hover:bg-purple-700 text-white hover:shadow-md'
-                  }`}
-                  title={isOutOfStock(item.availability) ? 'Out of stock' : 'Add to cart'}
-                >
-                  {isOutOfStock(item.availability) ? (
-                    <Plus className="h-4 w-4 mr-1" />
-                  ) : (
-                    <ShoppingCart className="h-4 w-4 mr-1" />
-                  )}
-                  {isOutOfStock(item.availability) ? 'Unavailable' : 'Add to Cart'}
-                </button>
+                <div className="flex space-x-2">
+                  <VirtualTryOnButton
+                    productImage={item.image}
+                    productName={item.description}
+                    className="text-xs px-2 py-1"
+                  />
+                  <button
+                    onClick={() => handleAddToCart(item)}
+                    disabled={isOutOfStock(item.availability)}
+                    className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      isOutOfStock(item.availability)
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-purple-600 hover:bg-purple-700 text-white hover:shadow-md'
+                    }`}
+                    title={isOutOfStock(item.availability) ? 'Out of stock' : 'Add to cart'}
+                  >
+                    {isOutOfStock(item.availability) ? (
+                      <Plus className="h-4 w-4 mr-1" />
+                    ) : (
+                      <ShoppingCart className="h-4 w-4 mr-1" />
+                    )}
+                    {isOutOfStock(item.availability) ? 'Unavailable' : 'Add'}
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
