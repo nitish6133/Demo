@@ -1,166 +1,142 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { LogIn, Eye, EyeOff, Gem, AlertCircle } from 'lucide-react';
-import { useAuthStore } from '../stores/authStore';
+import { Link, useNavigate } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
 
 const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState({
+    username: '',
+    password: '',
+  });
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  
-  const { login } = useAuthStore();
-  const navigate = useNavigate();
-  const location = useLocation();
 
-  // Get the intended destination or default to home
-  const from = (location.state as any)?.from?.pathname || '/';
+  const { login, loading } = useAuthStore();
+  const navigate = useNavigate();
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError('');
 
-    try {
-      const success = await login(email, password);
-      if (success) {
-        // Redirect based on role or intended destination
-        if (email === 'admin@jewelry.com') {
-          navigate('/admin');
-        } else {
-          navigate(from);
-        }
-      } else {
-        setError('Invalid email or password');
-      }
-    } catch (err) {
-      setError('Login failed. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    const success = await login(formData);
 
-  const fillDemoCredentials = (type: 'admin' | 'user') => {
-    if (type === 'admin') {
-      setEmail('admin@jewelry.com');
-      setPassword('admin123');
+    if (success) {
+      const { user } = useAuthStore.getState();
+
+      // Redirect based on user role
+      if (user?.role === 'Admin') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } else {
-      setEmail('user@jewelry.com');
-      setPassword('user123');
+      setError('Invalid credentials. Please try again.');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-purple-100 flex items-center justify-center px-4">
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center mb-4">
-              <Gem className="h-10 w-10 text-purple-600" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Welcome Back</h1>
-            <p className="text-gray-600 mt-2">Sign in to your account</p>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <div className="mx-auto h-12 w-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center">
+            <span className="text-white font-bold text-lg">CL</span>
           </div>
+          <h2 className="mt-6 text-3xl font-bold text-gray-900">Login to JewelleryInventory</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Login to unlock best prices and become an insider for our exclusive launches & offers.
+          </p>
+        </div>
 
-          {/* Demo Credentials */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <h3 className="text-sm font-semibold text-blue-900 mb-2">Demo Credentials</h3>
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => fillDemoCredentials('admin')}
-                className="w-full text-left text-sm text-blue-700 hover:text-blue-900 transition-colors duration-200"
-              >
-                <strong>Admin:</strong> admin@jewelry.com / admin123
-              </button>
-              <button
-                type="button"
-                onClick={() => fillDemoCredentials('user')}
-                className="w-full text-left text-sm text-blue-700 hover:text-blue-900 transition-colors duration-200"
-              >
-                <strong>User:</strong> user@jewelry.com / user123
-              </button>
-            </div>
-          </div>
-
-          {/* Error Message */}
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-start">
-              <AlertCircle className="h-5 w-5 text-red-600 mr-3 mt-0.5" />
-              <div>
-                <p className="text-red-700 text-sm">{error}</p>
-              </div>
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+              {error}
             </div>
           )}
 
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
+          <div>
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+              Username or Email
+            </label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              required
+              value={formData.username}
+              onChange={handleChange}
+              className="mt-1 block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+              placeholder="Enter Mobile Number or Email"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              Password
+            </label>
+            <div className="mt-1 relative">
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="Enter your email"
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
                 required
+                value={formData.password}
+                onChange={handleChange}
+                className="block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                placeholder="Enter Password"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5 text-gray-400" />
+                ) : (
+                  <Eye className="h-5 w-5 text-gray-400" />
+                )}
+              </button>
             </div>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Enter your password"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-
+          <div>
             <button
               type="submit"
-              disabled={isLoading}
-              className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white py-3 px-4 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center"
+              disabled={loading}
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Signing In...
-                </>
-              ) : (
-                <>
-                  <LogIn className="h-4 w-4 mr-2" />
-                  Sign In
-                </>
-              )}
+              {loading ? 'Logging in...' : 'CONTINUE TO LOGIN'}
             </button>
-          </form>
-
-          {/* Footer */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <span className="text-purple-600 font-medium">Contact us to get started</span>
-            </p>
           </div>
-        </div>
+
+          <div className="text-center">
+            <span className="text-sm text-gray-600">
+              New to JewelleryInventory?{' '}
+              <Link to="/register" className="font-medium text-purple-600 hover:text-purple-500">
+                Create an Account
+              </Link>
+            </span>
+          </div>
+
+          <div className="text-center text-xs text-gray-500">
+            By continuing you acknowledge that you are at least 18 years old and have read and agree to{' '}
+            <Link to="/terms" className="text-purple-600 hover:text-purple-500">
+              Terms and Conditions
+            </Link>{' '}
+            &{' '}
+            <Link to="/privacy" className="text-purple-600 hover:text-purple-500">
+              Privacy Policy
+            </Link>
+            .
+          </div>
+        </form>
       </div>
     </div>
   );
