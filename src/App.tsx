@@ -1,47 +1,59 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Header from './components/common/Header';
+import Footer from './components/common/Footer';
+import HomePage from './pages/HomePage';
+import ProductsPage from './pages/ProductsPage';
+import ProductDetailPage from './pages/ProductDetailPage';
+import CategoryPage from './pages/CategoryPage';
+import SearchPage from './pages/SearchPage';
+import CartPage from './pages/CartPage';
+import WishlistPage from './pages/WishlistPage';
+import UserProfile from './components/user/UserProfile';
+import OrderConfirmationPage from './pages/OrderConfirmationPage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import AdminPage from './pages/AdminPage';
-import DataPage from './pages/DataPage';
-import CheckoutPage from './pages/CheckoutPage';
-import Navigation from './components/Navigation';
-import { CartProvider } from './context/CartContext';
-import { TableData } from './types';
+import { useAuthStore } from './store/authStore';
 
 function App() {
-  const [tableData, setTableData] = useState<TableData[]>([]);
+  const { isAuthenticated, user, initialize } = useAuthStore();
 
-  // Add unique IDs to imported data
-  const handleDataParsed = (data: TableData[]) => {
-    const dataWithIds = data.map((item, index) => ({
-      ...item,
-      id: `jewelry-${Date.now()}-${index}`
-    }));
-    setTableData(dataWithIds);
-  };
+  useEffect(() => {
+    // Initialize auth state on app load
+    initialize();
+  }, [initialize]);
 
   return (
-    <CartProvider>
-      <Router>
-        <div className="min-h-screen bg-gray-50">
-          <Navigation />
+    <Router>
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <main className="flex-1">
           <Routes>
-            <Route path="/" element={<Navigate to="/admin" replace />} />
-            <Route 
-              path="/admin" 
-              element={<AdminPage onDataParsed={handleDataParsed} />} 
-            />
-            <Route 
-              path="/data" 
-              element={<DataPage data={tableData} />} 
-            />
-            <Route 
-              path="/checkout" 
-              element={<CheckoutPage />} 
-            />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/products" element={<ProductsPage />} />
+            <Route path="/product/:slug" element={<ProductDetailPage />} />
+            <Route path="/category/:category" element={<CategoryPage />} />
+            <Route path="/search" element={<SearchPage />} />
+            <Route path="/cart" element={<CartPage />} />
+            <Route path="/wishlist" element={<WishlistPage />} />
+            <Route path="/profile" element={<UserProfile />} />
+            <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            
+            {/* Protected Admin Route */}
+            {isAuthenticated && user?.role === 'Admin' && (
+              <Route path="/admin" element={<AdminPage />} />
+            )}
+            
+            {/* Fallback for unknown routes */}
+            <Route path="*" element={<HomePage />} />
           </Routes>
-        </div>
-      </Router>
-    </CartProvider>
+        </main>
+        <Footer />
+      </div>
+    </Router>
   );
 }
 
