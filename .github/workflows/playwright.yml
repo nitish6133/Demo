@@ -8,17 +8,26 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'  # or your version
-      
+          node-version: '18'
+
       - name: Install Dependencies
         run: npm install
-      
-      - name: Install Playwright Browsers
-        run: npx playwright install
-      
+
+      # Install Playwright and browser dependencies
+      - name: Install Playwright Browsers and dependencies
+        run: |
+          npx playwright install --with-deps
+
+      # Start your mock backend in background
+      - name: Start Mock MCP backend
+        run: |
+          node src/mcp-mock.js &
+          sleep 5 # wait to ensure server starts
+
+      # Run Playwright tests
       - name: Run Playwright Tests
         run: npx playwright test --reporter=list
