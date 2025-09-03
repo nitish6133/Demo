@@ -1,39 +1,45 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { verifyTokenService, logoutService, verifyTokenForLoginService } from "../services/authService";
-import { serviceBaseUrl } from "../constants/appConstants";
+import type { User } from "../types";
 
-export interface User {
-  id: string;
-  email: string;
-  createdDate: string;
-  keycloakId: string;
-  isEmailVerified: boolean;
-  username: string;              
-  profilePicture: string | null;  
-  provider: string;
-}
-
-interface AuthState {
+interface LoginState {
   isLoading: boolean;
   user: User | null;
+  backendUrl: string;
   loginWithProvider: (provider: string) => void;
   verifyTokenAfterLogin: () => Promise<void>;
   verifySessionPeriodically: () => Promise<void>;
   logout: () => void;
   setUser: (user: User | null) => void;
+  setBackendUrl: (url: string) => void;
 }
 
-export const useAuthStore = create<AuthState>()(
+// Create a unique store name to avoid conflicts with host app
+const STORE_NAME = `react-login-component-auth-${Date.now()}`;
+
+export const useLoginStore = create<LoginState>()(
   persist(
     (set, get) => ({
       isLoading: false,
       user: null,
+      backendUrl: '',
+
+      setBackendUrl: (url: string) => {
+        set({ backendUrl: url });
+      },
 
       loginWithProvider: (provider: string) => {
+        const { backendUrl: storeBackendUrl } = get();
+        const backendUrl = storeBackendUrl || import.meta.env.VITE_API_BASE_URL;
+        if (!backendUrl) {
+          console.error('Backend URL not available');
+          return;
+        }
+
         set({ isLoading: true });
         try {
-          const redirectUrl = `${serviceBaseUrl}/auth/provider?provider=${provider}`;
+          const redirectUrl = `${backendUrl}/auth/provider?provider=${provider}`;
           window.location.href = redirectUrl;
           set({ isLoading: false });
         } catch (error) {
@@ -42,10 +48,16 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-       // 🔑 Called only after login redirect to verify and store user data
       verifyTokenAfterLogin: async () => {
+        const { backendUrl: storeBackendUrl } = get();
+        const backendUrl = storeBackendUrl || import.meta.env.VITE_API_BASE_URL;
+        if (!backendUrl) {
+          console.error('Backend URL not available');
+          return;
+        }
+
         try {
-          const data = await verifyTokenForLoginService();
+          const data = await verifyTokenForLoginService(backendUrl);
           if (data?.code === 1040 && data?.result) {
             const user: User = data.result;
             set({ user, isLoading: false });
@@ -60,15 +72,13 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-     
-      
-      
       verifySessionPeriodically: async () => {
-        const currentUser = get().user;
-        if (!currentUser) return; // Don't check if already logged out
+        const { backendUrl: storeBackendUrl, user: currentUser } = get();
+        const backendUrl = storeBackendUrl || import.meta.env.VITE_API_BASE_URL;
+        if (!currentUser || !backendUrl) return;
         
         try {
-          const data = await verifyTokenService();
+          const data = await verifyTokenService(backendUrl);
           if (data.code !== 1040) {
             console.warn(`Session invalid (code: ${data.code}), logging out...`);
             get().logout();
@@ -80,24 +90,27 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: async () => {
+        const { backendUrl: storeBackendUrl } = get();
+        const backendUrl = storeBackendUrl || import.meta.env.VITE_API_BASE_URL;
         set({ user: null, isLoading: false });
         
         try {
-          const responseCode = await logoutService();
-          console.log("Logout service response:", responseCode);
+          if (backendUrl) {
+            const responseCode = await logoutService(backendUrl);
+            console.log("Logout service response:", responseCode);
+          }
         } catch (error) {
           console.error("Logout failed:", error);
         } finally {
-          useAuthStore.persist.clearStorage();
-          sessionStorage.clear();
-          localStorage.clear();
+          // Clear only this component's storage
+          useLoginStore.persist.clearStorage();
         }
       },
 
       setUser: (user: User | null) => set({ user }),
     }),
     {
-      name: "auth-storage",
+      name: STORE_NAME,
       partialize: (state) => ({ user: state.user }),
     }
   )

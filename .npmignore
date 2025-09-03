@@ -1,0 +1,69 @@
+# Source files
+src/
+public/
+index.html
+
+# Development files
+.env*
+vite.config.ts
+tsconfig*.json
+tailwind.config.js
+eslint.config.js
+
+# Demo and development
+src/demo/
+src/main.tsx
+src/App.tsx
+src/index.css
+
+# Build artifacts
+node_modules/
+.vite/
+dist/
+
+# Version control
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+.env.test
+.env.production
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test

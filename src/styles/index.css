@@ -1,0 +1,59 @@
+/* Base styles for the login component */
+.react-login-component {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light;
+  color: rgba(0, 0, 0, 0.87);
+  background-color: #ffffff;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure proper box-sizing */
+.react-login-component *,
+.react-login-component *::before,
+.react-login-component *::after {
+  box-sizing: border-box;
+}
+
+/* Reset margins and paddings */
+.react-login-component h1,
+.react-login-component h2,
+.react-login-component h3,
+.react-login-component p {
+  margin: 0;
+}
+
+/* Button focus styles */
+.react-login-component button:focus-visible {
+  outline: 2px solid #3B82F6;
+  outline-offset: 2px;
+}
+
+/* Loading animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.react-login-component .animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Backdrop blur fallback */
+.react-login-component .backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+}
+
+@supports not (backdrop-filter: blur(4px)) {
+  .react-login-component .backdrop-blur-sm {
+    background-color: rgba(255, 255, 255, 0.9);
+  }
+}

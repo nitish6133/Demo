@@ -1,21 +1,30 @@
 import axios from "axios";
-import { serviceBaseUrl } from "../constants/appConstants";
 
-// 🔑 Used only after login redirect to verify and store user data
-export const verifyTokenForLoginService = async () => {
-  const res = await axios.post(`${serviceBaseUrl}/verifyToken`, {});
+// Create axios instance that will be configured with the backend URL
+const createAuthService = (baseURL: string) => {
+  return axios.create({
+    baseURL,
+    withCredentials: true,
+    timeout: 10000
+  });
+};
+
+export const verifyTokenForLoginService = async (backendUrl: string) => {
+  const authService = createAuthService(backendUrl);
+  const res = await authService.post('/verifyToken', {});
   return res.data;
 };
 
-// 🔄 Used for periodic session checking (every 5s)
-export const verifyTokenService = async () => {
-  const res = await axios.post(`${serviceBaseUrl}/verifyToken`, {});
+export const verifyTokenService = async (backendUrl: string) => {
+  const authService = createAuthService(backendUrl);
+  const res = await authService.post('/verifyToken', {});
   return res.data;
 };
 
-export const logoutService = async (): Promise<any> => {
+export const logoutService = async (backendUrl: string): Promise<any> => {
   try {
-    const response = await axios.post(`${serviceBaseUrl}/logout`);
+    const authService = createAuthService(backendUrl);
+    const response = await authService.post('/logout');
     return response.data.code;
   } catch (error) {
     throw error;
