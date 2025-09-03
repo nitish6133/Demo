@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { ArrowRight, ArrowLeft } from "lucide-react";
 import { LoginProps, User } from "../types";
 import { createAuthService } from "../services/authService";
+import { useAuthStore } from "../stores/useAuthStore";
 import Button from "./Button";
 
 const Login: React.FC<LoginProps> = ({
@@ -12,7 +13,7 @@ const Login: React.FC<LoginProps> = ({
   className = "",
 }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const { user, setUser } = useAuthStore();
   
   const authService = createAuthService(backendUrl);
 
