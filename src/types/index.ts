@@ -15,6 +15,7 @@ export interface LoginTheme {
   primaryColor?: string;
   backgroundColor?: string;
   fontFamily?: string;
+  buttonStyle?: React.CSSProperties;
 }
 
 export interface LoginProps {

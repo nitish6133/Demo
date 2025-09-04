@@ -14,21 +14,18 @@ const Login: React.FC<LoginProps> = ({
 }) => {
   const { loginWithProvider, isLoading, user, verifyTokenAfterLogin, setBackendUrl } = useLoginStore();
 
-  // Set the backend URL when component mounts or when it changes
   useEffect(() => {
     if (backendUrl) {
       setBackendUrl(backendUrl);
     }
   }, [backendUrl, setBackendUrl]);
 
-  // Handle successful login
   useEffect(() => {
     if (user && onSuccess) {
       onSuccess(user);
     }
   }, [user, onSuccess]);
 
-  // Check for authentication after login redirect
   useEffect(() => {
     verifyTokenAfterLogin();
   }, [verifyTokenAfterLogin]);
@@ -38,9 +35,10 @@ const Login: React.FC<LoginProps> = ({
   };
 
   const {
-    primaryColor = "#3B82F6",
-    backgroundColor = "linear-gradient(135deg, #EBF4FF 0%, #E0E7FF 100%)",
-    fontFamily = "system-ui, -apple-system, sans-serif"
+    primaryColor = "",
+    backgroundColor = "",
+    fontFamily = "",
+    buttonStyle = {}
   } = theme;
 
   // Don't show login form if user is already logged in
@@ -56,24 +54,15 @@ const Login: React.FC<LoginProps> = ({
   }
 
   const defaultLayout = (
-    <div className="space-y-6">
-      <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          Welcome Back
-        </h1>
-        <p className="text-gray-600">
-          Sign in to your account to continue
-        </p>
-      </div>
-
       <Button
         onClick={handleContinueWithGoogle}
         loading={isLoading}
-        className="w-full"
+        className="w-5 h-5"
         size="lg"
-        style={{ 
+        style={{
           backgroundColor: primaryColor,
-          fontFamily 
+          fontFamily,
+          ...buttonStyle // ✅ apply custom overrides
         }}
       >
         <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
@@ -95,28 +84,19 @@ const Login: React.FC<LoginProps> = ({
           />
         </svg>
         Continue with Google
-        <ArrowRight className="w-5 h-5 ml-2" />
+  
       </Button>
-
-      <div className="mt-6 text-center text-sm text-gray-500">
-        By continuing, you agree to our Terms of Service and Privacy Policy
-      </div>
-    </div>
   );
 
   return (
-    <div 
-      className={`react-login-component flex items-center justify-center px-4 py-12 ${className}`}
-      style={{ 
+    <div
+      className={`${className}`}
+      style={{
         background: backgroundColor,
-        fontFamily 
+        fontFamily
       }}
     >
-      <div className="max-w-md w-full">
-        <div className="bg-white bg-opacity-80 backdrop-blur-sm rounded-2xl shadow-xl border border-blue-200 p-8">
           {customLayout || defaultLayout}
-        </div>
-      </div>
     </div>
   );
 };

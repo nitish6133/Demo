@@ -14,7 +14,7 @@ A reusable React login component with Google OAuth support, built with TypeScrip
 ## Installation
 
 ```bash
-npm install @your-org/react-login-component
+npm install @your-org/react-login-component --registry=https://your-nexus-registry.com
 ```
 
 ## Basic Usage
@@ -69,6 +69,51 @@ function App() {
     </div>
   );
 }
+```
+
+## Advanced Usage
+
+### Using Individual Services (Optional)
+
+If you need direct access to the authentication services:
+
+```tsx
+import { verifyTokenService, logoutService } from '@your-org/react-login-component/services';
+
+// Verify token manually
+const userData = await verifyTokenService('https://your-api.com/api');
+
+// Logout manually
+await logoutService('https://your-api.com/api');
+```
+
+### Using the Store (Advanced)
+
+For advanced use cases, you can access the internal store:
+
+```tsx
+import { useLoginStore } from '@your-org/react-login-component/stores';
+
+function MyComponent() {
+  const { user, logout } = useLoginStore();
+  
+  return (
+    <div>
+      {user ? `Welcome ${user.username}` : 'Not logged in'}
+      <button onClick={logout}>Logout</button>
+    </div>
+  );
+}
+```
+
+### Using Individual Components
+
+```tsx
+import { Button } from '@your-org/react-login-component/components';
+
+<Button variant="primary" size="lg">
+  Custom Button
+</Button>
 ```
 
 ## Props
@@ -215,12 +260,37 @@ npm run build
 ## Publishing
 
 ```bash
+# Install dependencies
+npm install
+
 # Build the package
 npm run build
 
-# Publish to Nexus
+# Publish to Nexus registry
 npm publish --registry=https://your-nexus-registry.com
 ```
+
+## Package Structure After Build
+
+After running `npm run build`, the `dist/` folder will contain:
+
+```
+dist/
+├── index.js          # Main ES module
+├── index.cjs         # CommonJS module  
+├── index.d.ts        # TypeScript declarations
+├── index.css         # Bundled styles
+├── components/       # Individual component exports
+├── services/         # Authentication services
+├── stores/           # Zustand store
+└── types/           # TypeScript types
+```
+
+This structure allows for flexible imports:
+- `import { Login } from '@your-org/react-login-component'` - Main component
+- `import '@your-org/react-login-component/styles'` - Styles
+- `import { authService } from '@your-org/react-login-component/services'` - Services
+- `import { useLoginStore } from '@your-org/react-login-component/stores'` - Store
 
 ## License
 

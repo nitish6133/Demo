@@ -8,26 +8,31 @@ export default defineConfig({
     react(),
     dts({
       insertTypesEntry: true,
-      include: ['src/**/*'],
-      exclude: ['src/main.tsx', 'src/App.tsx', 'src/pages/**/*']
+      outDir: 'dist',
+      rollupTypes: false, // Set to false to keep all declaration files
+      tsconfigPath: resolve(__dirname, 'tsconfig.app.json'), // Use your tsconfig
+      include: [resolve(__dirname, 'src/**/*')]
     })
   ],
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
+      entry: resolve(__dirname, 'src/index.ts'), 
       name: 'ReactLoginComponent',
-      formats: ['es'],
-      fileName: 'index'
+      formats: ['es', 'cjs'],
+      fileName: (format) => `index.${format === 'es' ? 'js' : 'cjs'}`
     },
     rollupOptions: {
-      external: ['react', 'react-dom'],
+      external: ['react', 'react-dom', 'react/jsx-runtime'],
       output: {
+        preserveModules: true, 
+        preserveModulesRoot: 'src', 
         globals: {
           react: 'React',
           'react-dom': 'ReactDOM'
         }
       }
     },
-    cssCodeSplit: false
+    cssCodeSplit: false,
+    sourcemap: true
   }
 });
