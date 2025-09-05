@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createRazorpayService } from '../services/razorpayService';
-import { RazorpayPaymentFormProps, PaymentFormData } from '../types';
+import type { PaymentFormData, RazorpayPaymentFormProps } from '../types';
 
 declare global {
   interface Window {
