@@ -1,12 +1,14 @@
 import axios from 'axios';
-import { OrderResponse, VerificationResponse, PaymentFormData } from '../types';
+import type { OrderResponse, VerificationResponse } from '../types';
 
 export class RazorpayService {
   private baseUrl: string;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl.replace(/\/$/, ''); // Remove trailing slash
+    console.log("baseUrl", baseUrl)
   }
+
 
   async createPaymentByRazorpay(orderData: {
     amount: number;
