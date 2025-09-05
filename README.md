@@ -1,164 +1,256 @@
-Perfect 👌
-Based on your flow, here’s a **README.md** file that documents the **Google Authentication setup and flow** in your project.
+# Razorpay Payment Form
 
----
+A fully customizable React component for Razorpay payments with TypeScript support.
 
-````markdown
-# 🔐 Google Authentication Flow (React + Zustand + Backend)
+## Features
 
-This project integrates **Google OAuth login** with a frontend built in **React + Zustand** and a backend that handles token verification.  
-The flow ensures secure login, session verification, and automatic logout on session timeout.
+- 🎨 **Fully Customizable** - Style every element with CSS classes or inline styles
+- 🔧 **Dynamic Backend URL** - Configure backend endpoint at runtime
+- 📝 **Simple Form** - Just 4 essential fields: amount, currency, receipt, notes
+- 🔒 **Built-in Services** - Includes createPaymentByRazorpay, verifyPayment, getOrderDetails
+- 📱 **Responsive** - Works on all device sizes
+- 🎯 **TypeScript** - Full type safety and IntelliSense support
+- 🚀 **Easy Integration** - Drop-in component for any React project
 
----
+## Installation
 
-## 🚀 Authentication Flow
+```bash
+npm install @your-org/razorpay-payment-form
+```
 
-### 1. User Clicks "Continue with Google"
-- Component: `Login.tsx`
-- Action: Calls `loginWithProvider("google")` from `useAuthStore`.
+## Quick Start
 
 ```tsx
-const handleContinueWithGoogle = () => {
-  loginWithProvider("google");
-};
-````
+import React from 'react';
+import { RazorpayPaymentForm } from '@your-org/razorpay-payment-form';
+import '@your-org/razorpay-payment-form/styles';
 
-This triggers a **redirect** to the backend provider route:
-
-```ts
-loginWithProvider: (provider: string) => {
-  const redirectUrl = `${serviceBaseUrl}/auth/provider?provider=${provider}`;
-  window.location.href = redirectUrl;
+function App() {
+  return (
+    <RazorpayPaymentForm
+      backendUrl="https://your-api.com/api"
+      razorpayKeyId="rzp_test_your_key_id"
+      onPaymentSuccess={(response) => {
+        console.log('Payment successful:', response);
+      }}
+      onPaymentFailure={(error) => {
+        console.error('Payment failed:', error);
+      }}
+    />
+  );
 }
 ```
 
----
+## Props
 
-### 2. Backend Handles Google Login
+### Required Props
 
-* Backend authenticates with Google.
-* On success → redirects user back to `/`.
+| Prop | Type | Description |
+|------|------|-------------|
+| `backendUrl` | `string` | Your backend API base URL |
+| `razorpayKeyId` | `string` | Your Razorpay key ID |
 
----
+### Styling Props
 
-### 3. Verify Token After Login
+| Prop | Type | Description |
+|------|------|-------------|
+| `className` | `string` | CSS class for the container |
+| `formClassName` | `string` | CSS class for the form |
+| `inputClassName` | `string` | CSS class for input fields |
+| `buttonClassName` | `string` | CSS class for the submit button |
+| `labelClassName` | `string` | CSS class for labels |
+| `errorClassName` | `string` | CSS class for error messages |
+| `style` | `CSSProperties` | Inline styles for container |
+| `inputStyle` | `CSSProperties` | Inline styles for inputs |
+| `buttonStyle` | `CSSProperties` | Inline styles for button |
+| `labelStyle` | `CSSProperties` | Inline styles for labels |
 
-* Page: `Home.tsx`
-* On mount, it calls `verifyTokenAfterLogin()` once.
+### Customization Props
 
-```tsx
-useEffect(() => {
-  verifyTokenAfterLogin();
-}, [verifyTokenAfterLogin]);
-```
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `amountLabel` | `string` | `"Amount"` | Label for amount field |
+| `currencyLabel` | `string` | `"Currency"` | Label for currency field |
+| `receiptLabel` | `string` | `"Receipt"` | Label for receipt field |
+| `notesLabel` | `string` | `"Notes"` | Label for notes field |
+| `submitButtonText` | `string` | `"Pay Now"` | Submit button text |
+| `loadingText` | `string` | `"Processing..."` | Loading state text |
+| `defaultCurrency` | `string` | `"INR"` | Default currency value |
+| `defaultAmount` | `number` | `undefined` | Default amount value |
 
-* This step **verifies the token** with backend (`verifyTokenForLoginService`) and stores user details in Zustand.
+### Callback Props
 
-```ts
-verifyTokenAfterLogin: async () => {
-  const data = await verifyTokenForLoginService();
-  if (data?.code === 1040) {
-    set({ user: data.result });
-  } else {
-    set({ user: null });
-  }
-}
-```
+| Prop | Type | Description |
+|------|------|-------------|
+| `onPaymentSuccess` | `(response) => void` | Called when payment succeeds |
+| `onPaymentFailure` | `(error) => void` | Called when payment fails |
+| `onOrderCreated` | `(order) => void` | Called when order is created |
+| `onFormSubmit` | `(data) => void` | Called when form is submitted |
+| `validateForm` | `(data) => string \| null` | Custom form validation |
 
-✅ Result: Logged-in user is stored in global state.
+## Styling Examples
 
----
-
-### 4. Periodic Session Verification
-
-* Implemented in `App.tsx`:
-
-```tsx
-useEffect(() => {
-  if (!user) return;
-  const interval = setInterval(() => {
-    verifySessionPeriodically();
-  }, 5000);
-  return () => clearInterval(interval);
-}, [user]);
-```
-
-* Runs **every 5 seconds** to check if the session is still valid.
-* If expired → user is logged out and client storage cleared.
-
-```ts
-verifySessionPeriodically: async () => {
-  const data = await verifyTokenService();
-  if (data.code !== 1040) {
-    get().logout();
-  }
-}
-```
-
----
-
-### 5. Logout Flow
-
-* Clears Zustand state + storage (`localStorage`, `sessionStorage`).
-* Calls backend `logoutService()`.
-
-```ts
-logout: async () => {
-  set({ user: null, isLoading: false });
-  await logoutService();
-  useAuthStore.persist.clearStorage();
-  sessionStorage.clear();
-  localStorage.clear();
-}
-```
-
----
-
-### 6. Protected Routes
-
-* `ProtectedRoute.tsx` ensures restricted pages are accessible only if `user` exists.
-* If not logged in → redirects to `/login`.
+### Using CSS Classes
 
 ```tsx
-if (!user) {
-  navigate('/login');
-}
-```
-
-Example:
-
-```tsx
-<Route
-  path="/booking"
-  element={
-    <ProtectedRoute>
-      <Booking />
-    </ProtectedRoute>
-  }
+<RazorpayPaymentForm
+  backendUrl="https://your-api.com/api"
+  razorpayKeyId="rzp_test_your_key_id"
+  className="my-payment-form"
+  formClassName="payment-form"
+  inputClassName="form-input"
+  buttonClassName="submit-btn"
+  labelClassName="form-label"
 />
 ```
 
----
+```css
+.my-payment-form {
+  max-width: 500px;
+  margin: 2rem auto;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
 
-## 🔑 Summary of Flow
+.form-input {
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 16px;
+}
 
-1. **Click Google Button** → Redirects to backend OAuth.
-2. **Backend Auth** → Redirects back to `/`.
-3. **`Home.tsx` Mounted** → Calls `verifyTokenAfterLogin()` to store user.
-4. **`App.tsx` Interval** → Calls `verifySessionPeriodically()` every 5s.
-5. **If Invalid Session** → User logged out automatically.
-6. **Protected Routes** → Only accessible if user is authenticated.
+.form-input:focus {
+  border-color: #3b82f6;
+  outline: none;
+}
 
----
+.submit-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 14px 28px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+```
 
-## 🛡 Benefits
+### Using Inline Styles
 
-* 🔄 Automatic session refresh checks
-* ❌ Auto logout on session timeout
-* 🔐 Protected routes with redirect
-* 🗄 Centralized state management with Zustand
+```tsx
+<RazorpayPaymentForm
+  backendUrl="https://your-api.com/api"
+  razorpayKeyId="rzp_test_your_key_id"
+  style={{
+    backgroundColor: '#f8fafc',
+    padding: '2rem',
+    borderRadius: '16px',
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)'
+  }}
+  inputStyle={{
+    padding: '14px 18px',
+    border: '2px solid #cbd5e0',
+    borderRadius: '10px',
+    fontSize: '16px',
+    backgroundColor: 'white'
+  }}
+  buttonStyle={{
+    background: 'linear-gradient(45deg, #ff6b6b, #ee5a24)',
+    padding: '16px 32px',
+    borderRadius: '25px',
+    fontWeight: 'bold',
+    textTransform: 'uppercase'
+  }}
+/>
+```
 
----
+## Backend Requirements
 
+Your backend should implement these endpoints:
 
+### POST /order
+Create a new payment order
+```json
+{
+  "amount": 100000,
+  "currency": "INR",
+  "receipt": "receipt_123",
+  "notes": "Payment for order #123"
+}
+```
 
+### POST /payments/verify
+Verify payment signature
+```json
+{
+  "razorpay_order_id": "order_xxx",
+  "razorpay_payment_id": "pay_xxx",
+  "razorpay_signature": "signature_xxx"
+}
+```
+
+### GET /orders/:orderId
+Get order details
+```
+GET /orders/order_xxx
+```
+
+## Advanced Usage
+
+### Custom Validation
+
+```tsx
+<RazorpayPaymentForm
+  backendUrl="https://your-api.com/api"
+  razorpayKeyId="rzp_test_your_key_id"
+  validateForm={(data) => {
+    if (data.amount < 100) {
+      return 'Minimum amount is ₹100';
+    }
+    if (!data.receipt.startsWith('RCP_')) {
+      return 'Receipt must start with RCP_';
+    }
+    return null;
+  }}
+/>
+```
+
+### Using the Service Directly
+
+```tsx
+import { createRazorpayService } from '@your-org/razorpay-payment-form';
+
+const razorpayService = createRazorpayService('https://your-api.com/api');
+
+// Create order
+const order = await razorpayService.createPaymentByRazorpay({
+  amount: 100000,
+  currency: 'INR',
+  receipt: 'receipt_123',
+  notes: 'Test payment'
+});
+
+// Verify payment
+const verification = await razorpayService.verifyPayment({
+  razorpay_order_id: 'order_xxx',
+  razorpay_payment_id: 'pay_xxx',
+  razorpay_signature: 'signature_xxx'
+});
+```
+
+## TypeScript Support
+
+The package includes full TypeScript definitions:
+
+```tsx
+import { 
+  RazorpayPaymentForm, 
+  PaymentFormData, 
+  PaymentResponse,
+  RazorpayPaymentFormProps 
+} from '@your-org/razorpay-payment-form';
+```
+
+## License
+
+MIT © [Your Name]
