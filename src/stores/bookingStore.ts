@@ -8,6 +8,10 @@ import { availablePujaris } from "../services/api";
 import { PRICING } from "../constants/pricing";
 import { useUserMetadataStore } from "./userMetadataStore";
 
+interface HouseholdBookingData {
+  families: Family[];
+  gotram: string;
+}
 // Use BackendBooking from bookingService to ensure consistent type
 
 interface BookingStore {
@@ -22,6 +26,7 @@ interface BookingStore {
   userBookings: BackendBooking[];
   isLoadingBookings: boolean;
   bookingError: string | null;
+  hasLoadedHouseholdData: boolean;
 
   setSelectedPujari: (pujari: Pujari | null) => void;
   setPujaDetails: (pujaType: string, date: string, time: string) => void;
@@ -42,6 +47,8 @@ interface BookingStore {
   fetchUserBookings: (userEmail: string, userId?: string) => Promise<void>;
   loadBookingFromBackend: (bookingId: string) => Promise<void>;
   clearBookingError: () => void;
+  loadHouseholdDataIfAvailable: () => void;
+  setFamiliesFromHousehold: (families: Family[]) => void;
 }
 
 // Helper function to convert backend booking to frontend format
@@ -107,6 +114,7 @@ export const useBookingStore = create<BookingStore>()((set, get) => ({
   userBookings: [],
   isLoadingBookings: false,
   bookingError: null,
+  hasLoadedHouseholdData: false,
 
   setSelectedPujari: (pujari) => set({ selectedPujari: pujari }),
 
@@ -239,6 +247,33 @@ export const useBookingStore = create<BookingStore>()((set, get) => ({
 
   clearBookingError: () => set({ bookingError: null }),
 
+  loadHouseholdDataIfAvailable: () => {
+    const { hasLoadedHouseholdData } = get();
+    if (hasLoadedHouseholdData) return;
+    
+    try {
+      // Check session storage for household data
+      const householdDataRaw = sessionStorage.getItem('household-booking-data');
+      if (householdDataRaw) {
+        const householdData: HouseholdBookingData = JSON.parse(householdDataRaw);
+        set({ 
+          families: householdData.families,
+          hasLoadedHouseholdData: true 
+        });
+        console.log('Loaded household data into booking:', householdData);
+        
+        // Clear session storage after loading
+        sessionStorage.removeItem('household-booking-data');
+      }
+    } catch (error) {
+      console.error('Failed to load household data:', error);
+    }
+  },
+
+  setFamiliesFromHousehold: (families) => set({ 
+    families, 
+    hasLoadedHouseholdData: true 
+  }),
   resetBooking: () =>
     set({
       currentBooking: {},
@@ -250,6 +285,7 @@ export const useBookingStore = create<BookingStore>()((set, get) => ({
       lastBooking: null,
       bookingId: null,
       bookingError: null,
+      hasLoadedHouseholdData: false,
     }),
 
   submitBooking: async (userEmail: string) => {

@@ -9,6 +9,8 @@ import { StepIndicator } from './StepIndicator';
 import AiPujariLogoform  from '../../../public/images/ai-pujari-logo.ico' 
 import { useHouseholdStore } from '../../stores/householdStore';
 import { SaveBar } from './SaveBar';
+import { useEffect } from 'react';
+import { useToast } from '../UI/ToastContainer';
 
 const STEPS = [
   { key: 'basics', label: 'Household Basics', description: 'Gotram and family details' },
@@ -20,7 +22,25 @@ const STEPS = [
 ] as const;
 
 export const HouseholdForm: React.FC = () => {
-  const { currentStep } = useHouseholdStore();
+  const { currentStep, loadUserHousehold } = useHouseholdStore();
+  const { showSuccess } = useToast();
+
+  // Load existing household data on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        await loadUserHousehold();
+        // Check if data was loaded (user has existing household)
+        const state = useHouseholdStore.getState();
+        if (state.people.length > 0) {
+          showSuccess('Household Loaded', 'Your existing household data has been loaded for editing');
+        }
+      } catch (error) {
+        console.log('No existing household data found');
+      }
+    };
+    loadData();
+  }, [loadUserHousehold, showSuccess]);
 
   const renderStep = () => {
     switch (currentStep) {

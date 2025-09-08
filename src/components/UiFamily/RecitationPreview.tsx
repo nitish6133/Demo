@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useHouseholdStore } from '../../stores/householdStore';
 import { ChevronLeft, Eye, FileText, Play, Download } from 'lucide-react';
 import { RELATION_LABELS } from '../../types/household';
+import { useNavigate } from 'react-router-dom';
+import Button from '../UI/Button';
 
 export const RecitationPreview: React.FC = () => {
   const { 
@@ -11,8 +13,10 @@ export const RecitationPreview: React.FC = () => {
     getRecitationOrder, 
     relationships, 
     getHead,
-    setCurrentStep 
+    setCurrentStep,
+    exportToBookingFormat
   } = useHouseholdStore();
+  const navigate = useNavigate();
   
   const [showJson, setShowJson] = useState(false);
   const recitationOrder = getRecitationOrder();
@@ -58,6 +62,12 @@ export const RecitationPreview: React.FC = () => {
     setCurrentStep('pronunciation');
   };
 
+  const handleProceedToBooking = () => {
+    // Export household data and navigate to booking
+    const bookingData = exportToBookingFormat();
+    sessionStorage.setItem('household-booking-data', JSON.stringify(bookingData));
+    navigate('/booking');
+  };
   return (
     <div className="space-y-8">
       <div className="text-center">
@@ -153,6 +163,13 @@ export const RecitationPreview: React.FC = () => {
           <ChevronLeft className="mr-2 h-5 w-5" />
           Back to Pronunciation
         </button>
+        <Button
+          onClick={handleProceedToBooking}
+          className="flex-1 flex items-center justify-center"
+        >
+          Proceed to Puja Booking
+          <ChevronRight className="ml-2 h-5 w-5" />
+        </Button>
       </div>
     </div>
   );

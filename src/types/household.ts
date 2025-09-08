@@ -29,6 +29,9 @@ export interface Person {
   audioUrl?: string;          // short pronunciation clip
   isHead?: boolean;           // one per family
   notes?: string;
+  nativeName?: string;       // Optional native script name
+  dateOfBirth?: string;      // Optional birth date
+  phonetic?: string;         // Optional phonetic pronunciation guide
 }
 
 // Relationship edge (A -> relationKind -> B)

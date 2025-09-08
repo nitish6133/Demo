@@ -37,6 +37,15 @@ const Navbar: React.FC = () => {
             >
               Book a Puja
             </Link>
+            <Link
+              to="/householdForm"
+              className={`font-medium transition-colors ${isActive("/householdForm")
+                  ? "text-orange-600"
+                  : "text-gray-700 hover:text-orange-600"
+                }`}
+            >
+              Family Registration
+            </Link>
           </div>
 
           {/* User Menu */}

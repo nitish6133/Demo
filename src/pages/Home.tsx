@@ -366,6 +366,11 @@ const Home: React.FC = () => {
                   </Link>
                 )}
 
+                <Link to="/householdForm">
+                  <Button variant="outline" size="lg" className="px-6 py-3">
+                    Register Family First
+                  </Button>
+                </Link>
                 <Button
                   variant="outline"
                   onClick={() => {

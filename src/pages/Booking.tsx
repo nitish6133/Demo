@@ -44,6 +44,8 @@ const Booking: React.FC = () => {
     clearDiscount,
     calculateTotal,
     calculateFinalTotal,
+    loadHouseholdDataIfAvailable,
+    hasLoadedHouseholdData,
   } = useBookingStore();
 
   const [pujaType, setPujaType] = useState("Ganesh Chaturthi");
@@ -85,6 +87,10 @@ const Booking: React.FC = () => {
     }
   }, [authState, navigate]);
 
+  // Load household data on component mount
+  useEffect(() => {
+    loadHouseholdDataIfAvailable();
+  }, [loadHouseholdDataIfAvailable]);
   useEffect(() => {
     if (!userEmail || !userId) {
       return;
@@ -442,6 +448,11 @@ const Booking: React.FC = () => {
                   <h2 className="flex items-center text-xl font-semibold text-gray-800">
                     <Users className="mr-2 h-5 w-5 text-orange-600" />
                     Family Members
+                    {hasLoadedHouseholdData && (
+                      <span className="ml-2 text-sm text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                        From Household Registration
+                      </span>
+                    )}
                   </h2>
                   <Button
                     onClick={handleAddFamily}
@@ -454,6 +465,19 @@ const Booking: React.FC = () => {
                   </Button>
                 </div>
 
+                {hasLoadedHouseholdData && families.length > 0 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center space-x-2 text-blue-800">
+                      <Users className="w-4 h-4" />
+                      <span className="text-sm font-medium">
+                        Family data loaded from your household registration
+                      </span>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-1">
+                      You can edit these details or add additional families as needed.
+                    </p>
+                  </div>
+                )}
                 {families.map((family, familyIndex) => (
                   <div
                     key={family.id}
@@ -583,8 +607,25 @@ const Booking: React.FC = () => {
                 {families.length === 0 && (
                   <div className="text-center py-12 border-2 border-dashed border-orange-300 rounded-lg">
                     <Users className="w-12 h-12 text-orange-400 mx-auto mb-4" />
-                    <p className="text-gray-600 mb-4">No families added yet</p>
-                    <Button onClick={handleAddFamily}>Add Your Family</Button>
+                    <p className="text-gray-600 mb-4">
+                      {hasLoadedHouseholdData 
+                        ? "No family data available from household registration" 
+                        : "No families added yet"}
+                    </p>
+                    <div className="space-y-3">
+                      <Button onClick={handleAddFamily}>Add Your Family</Button>
+                      {!hasLoadedHouseholdData && (
+                        <div className="text-sm text-gray-500">
+                          <p>Or</p>
+                          <button
+                            onClick={() => navigate('/householdForm')}
+                            className="text-blue-600 hover:text-blue-700 underline"
+                          >
+                            Register your household first for easier booking
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { HouseholdFormState, Person, Relationship, RelationKind } from '../types/household';
 import { householdService } from '../services/householdService';
+import { useAuthStore } from './useAuthStore';
 
 interface HouseholdStore extends HouseholdFormState {
   // Actions
@@ -27,7 +28,11 @@ interface HouseholdStore extends HouseholdFormState {
   // Persistence
   saveHousehold: () => Promise<string>;
   loadHousehold: (id: string) => Promise<void>;
+  loadUserHousehold: () => Promise<void>;
   resetForm: () => void;
+  
+  // Integration with booking
+  exportToBookingFormat: () => { families: any[]; gotram: string };
 }
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -215,7 +220,14 @@ export const useHouseholdStore = create<HouseholdStore>()(
           throw new Error('Validation failed');
         }
 
+        const user = useAuthStore.getState().user;
+        if (!user) {
+          throw new Error('User must be authenticated to save household');
+        }
+
         const payload = {
+          userId: user.id,
+          userEmail: user.email,
           familyDisplayName: state.familyDisplayName,
           gotram: state.gotram,
           gotramPhonetic: state.gotramPhonetic,
@@ -232,8 +244,61 @@ export const useHouseholdStore = create<HouseholdStore>()(
         set({ ...initialState, ...household, currentStep: 'final' });
       },
 
+      loadUserHousehold: async () => {
+        const user = useAuthStore.getState().user;
+        if (!user) return;
+        
+        try {
+          const household = await householdService.getUserHousehold(user.id);
+          if (household) {
+            set({ 
+              ...initialState, 
+              ...household, 
+              currentStep: 'final',
+              isEditing: true 
+            });
+          }
+        } catch (error) {
+          console.log('No existing household found for user');
+        }
+      },
       resetForm: () => set(initialState)
+      
+      exportToBookingFormat: () => {
+        const state = get();
+        const recitationOrder = get().getRecitationOrder();
+        
+        // Convert household data to booking family format
+        const families = [{
+          id: 'household-family',
+          gotra: state.gotram,
+          gotraPronunciationId: state.gotramAudioUrl ? extractFilenameFromUrl(state.gotramAudioUrl) : undefined,
+          gotraPronunciationUrl: state.gotramAudioUrl,
+          members: recitationOrder.map(person => ({
+            id: person.id,
+            name: person.name,
+            pronunciationId: person.audioUrl ? extractFilenameFromUrl(person.audioUrl) : undefined,
+            pronunciationUrl: person.audioUrl
+          }))
+        }];
+        
+        return { families, gotram: state.gotram };
+      }
     }),
     { name: 'household-store' }
   )
 );
+
+// Helper function to extract filename from URL
+const extractFilenameFromUrl = (url: string): string | undefined => {
+  if (!url) return undefined;
+  try {
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/')) {
+      const parts = url.split('/');
+      return parts[parts.length - 1] || undefined;
+    }
+    return url;
+  } catch {
+    return url;
+  }
+};
