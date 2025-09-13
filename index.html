@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Future Citizen - School Career Explorer</title>
-    <meta name="description" content="Discover your future career! Upload your photo and see yourself as a professional in your dream job." />
+    <title id="dynamic-title">Dynamic App</title>
+    <meta name="description" content="A dynamic application template" id="dynamic-description" />
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,5 +15,12 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Update title and description dynamically
+      const projectName = window.VITE_PROJECT_NAME || 'Dynamic App';
+      const projectDescription = window.VITE_PROJECT_DESCRIPTION || 'A dynamic application template';
+      document.getElementById('dynamic-title').textContent = projectName;
+      document.getElementById('dynamic-description').setAttribute('content', projectDescription);
+    </script>
   </body>
 </html>

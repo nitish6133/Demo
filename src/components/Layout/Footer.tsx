@@ -1,19 +1,26 @@
 import React from 'react';
 import { Mail, FileText, Shield, XCircle, Cookie } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useProjectConfig } from '../../hooks/useProjectConfig';
 
 const Footer: React.FC = () => {
+  const { projectName, companyName, companyLogo, theme } = useProjectConfig();
 
   return (
-    <footer className="bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 relative overflow-hidden">
+    <footer 
+      className="relative overflow-hidden"
+      style={{
+        background: `linear-gradient(135deg, ${theme.colors.primary[900]}, ${theme.colors.secondary[900]}, ${theme.colors.primary[900]})`
+      }}
+    >
       {/* Animated Gradient Overlay */}
       <motion.div
-        className="absolute inset-0 bg-gradient-to-r from-purple-600/30 via-pink-600/30 to-blue-600/30"
+        className="absolute inset-0"
+        style={{
+          background: `linear-gradient(to right, ${theme.colors.primary[600]}30, ${theme.colors.accent[600]}30, ${theme.colors.secondary[600]}30)`
+        }}
         animate={{
-          background: [
-            "linear-gradient(to right, rgba(147, 51, 234, 0.3), rgba(219, 39, 119, 0.3), rgba(59, 130, 246, 0.3))",
-            "linear-gradient(to right, rgba(59, 130, 246, 0.3), rgba(147, 51, 234, 0.3), rgba(219, 39, 119, 0.3))"
-          ]
+          opacity: [0.3, 0.5, 0.3]
         }}
         transition={{ duration: 10, repeat: Infinity }}
       />
@@ -23,10 +30,10 @@ const Footer: React.FC = () => {
         {/* Company Info */}
         <div className="bg-white/20 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-rainbow border border-white/30">
           <h3 className="text-lg sm:text-xl font-bold font-display text-white drop-shadow-lg mb-3">
-            Future Citizen
+            {projectName}
           </h3>
           <p className="text-sm sm:text-base font-semibold text-gray-200 drop-shadow">
-            Shaping your magical journey with AI-powered insights and futuristic experiences.
+            A modern, dynamic application built with cutting-edge technology.
           </p>
         </div>
 
@@ -86,12 +93,12 @@ const Footer: React.FC = () => {
           <span className="drop-shadow text-center sm:text-left">© 2025 Future Citizen. All rights reserved.</span>
           <div className="flex items-center gap-2 drop-shadow text-center">
             <span>Powered by</span>
-                <img 
-                src="/images/yensi-logo.png" 
-                alt="Yensi Solutions" 
+            <img 
+              src={companyLogo} 
+              alt={companyName} 
                 className="h-6 object-contain"
               />
-            <span className="text-white font-bold">Yensi Solutions</span>
+            <span className="text-white font-bold">{companyName}</span>
           </div>
         </div>
       </div>
