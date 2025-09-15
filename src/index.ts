@@ -1,10 +1,9 @@
 // Main package exports
-export { default as RazorpayPaymentForm } from './components/RazorpayPaymentForm';
-export { razorpayService } from './services/razorpayService';
+export { default as StripePaymentForm } from './components/StripePaymentForm';
+export { stripeService } from './services/stripeService';
 export type { 
-  RazorpayPaymentFormProps, 
+  StripePaymentFormProps, 
   PaymentFormData, 
-  PaymentResponse,
-  OrderResponse,
+  PaymentIntentResponse,
   VerificationResponse 
-} from './types/razorpayTypes';
+} from './types/stripeTypes';

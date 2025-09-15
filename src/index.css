@@ -1,5 +1,5 @@
-/* Basic styles for the Razorpay Payment Form package */
-.razorpay-payment-form {
+/* Basic styles for the Stripe Payment Form package */
+.stripe-payment-form {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
@@ -7,17 +7,37 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-.razorpay-payment-form input:focus,
-.razorpay-payment-form textarea:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+.stripe-payment-form input:focus,
+.stripe-payment-form textarea:focus {
+  border-color: #635bff;
+  box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.1);
 }
 
-.razorpay-payment-form button:hover:not(:disabled) {
-  background-color: #2563eb;
+.stripe-payment-form button:hover:not(:disabled) {
+  background-color: #5a52d5;
 }
 
-.razorpay-payment-form button:disabled {
+.stripe-payment-form button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+.stripe-payment-form .StripeElement {
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  background-color: white;
+}
+
+.stripe-payment-form .StripeElement--focus {
+  border-color: #635bff;
+  box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.1);
+}
+
+.stripe-payment-form .StripeElement--invalid {
+  border-color: #ef4444;
+}
+
+.stripe-payment-form .StripeElement--complete {
+  border-color: #10b981;
 }

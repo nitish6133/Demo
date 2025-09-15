@@ -5,11 +5,25 @@ export interface PaymentFormData {
   notes: string;
 }
 
-export interface OrderResponse {
+export interface PaymentIntentResponse {
   success: boolean;
   data?: {
     id: string;
-    orderId: string;
+    paymentIntentId: string;
+    amount: number;
+    currency: string;
+    status: string;
+    clientSecret: string;
+    [key: string]: any;
+  };
+  error?: string;
+}
+
+export interface VerificationResponse {
+  success: boolean;
+  data?: {
+    paymentIntentId: string;
+    status: string;
     amount: number;
     currency: string;
     [key: string]: any;
@@ -17,21 +31,17 @@ export interface OrderResponse {
   error?: string;
 }
 
-export interface VerificationResponse {
-  status: 'success' | 'failed';
-  message?: string;
+export interface PaymentSuccessResponse {
+  paymentIntentId: string;
+  status: string;
+  amount: number;
+  currency: string;
 }
 
-export interface PaymentResponse {
-  razorpay_order_id: string;
-  razorpay_payment_id: string;
-  razorpay_signature: string;
-}
-
-export interface RazorpayPaymentFormProps {
+export interface StripePaymentFormProps {
   // Backend configuration
   backendUrl: string;
-  razorpayKeyId: string;
+  stripePublishableKey: string;
   
   // Form customization
   className?: string;
@@ -59,9 +69,9 @@ export interface RazorpayPaymentFormProps {
   defaultAmount?: number;
   
   // Callbacks
-  onPaymentSuccess?: (response: PaymentResponse) => void;
+  onPaymentSuccess?: (response: PaymentSuccessResponse) => void;
   onPaymentFailure?: (error: any) => void;
-  onOrderCreated?: (order: OrderResponse) => void;
+  onPaymentIntentCreated?: (intent: PaymentIntentResponse) => void;
   onFormSubmit?: (data: PaymentFormData) => void;
   
   // Validation

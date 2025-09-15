@@ -1,13 +1,13 @@
-# Razorpay Payment Form
+# Stripe Payment Form
 
-A fully customizable React component for Razorpay payments with TypeScript support.
+A fully customizable React component for Stripe payments with TypeScript support.
 
 ## Features
 
 - 🎨 **Fully Customizable** - Style every element with CSS classes or inline styles
 - 🔧 **Dynamic Backend URL** - Configure backend endpoint at runtime
 - 📝 **Simple Form** - Just 4 essential fields: amount, currency, receipt, notes
-- 🔒 **Built-in Services** - Includes createPaymentByRazorpay, verifyPayment, getOrderDetails
+- 🔒 **Built-in Services** - Includes createPaymentIntent, verifyPaymentIntent
 - 📱 **Responsive** - Works on all device sizes
 - 🎯 **TypeScript** - Full type safety and IntelliSense support
 - 🚀 **Easy Integration** - Drop-in component for any React project
@@ -21,8 +21,7 @@ To publish this package to your private npm registry, follow these steps:
 npm login --registry=http://localhost:8081/repository/frontend-packages/
 ```
 
-
-You’ll be prompted for your username, password, and email. Ensure your registry is accessible and the credentials are correct.
+You'll be prompted for your username, password, and email. Ensure your registry is accessible and the credentials are correct.
 
 2. build the app
 
@@ -40,28 +39,27 @@ After build the app, run:
 npm publish --registry=http://localhost:8081/repository/frontend-packages/
 ```
 
-
 💡 Make sure your package.json includes a unique version number before publishing.
 
 ## Installation
 
 ```bash
-npm install razorpay-payment-form --registry=http://localhost:8081/repository/frontend-packages/
+npm install stripe-payment-form --registry=http://localhost:8081/repository/frontend-packages/
 ```
 
 ## Quick Start
 
 ```tsx
 import React from 'react';
-import { RazorpayPaymentForm } from "razorpay-payment-form";
-import 'razorpay-payment-form/styles';
+import { StripePaymentForm } from "stripe-payment-form";
+import 'stripe-payment-form/styles';
 import { serviceBaseUrl } from "./constants/appConstants";
 
 function App() {
   return (
-    <RazorpayPaymentForm
+    <StripePaymentForm
       backendUrl={serviceBaseUrl}            // ✅ use your proxied backend 
-      razorpayKeyId={import.meta.env.VITE_RAZORPAY_KEY_ID as string}
+      stripePublishableKey={import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string}
       onPaymentSuccess={(response) => {
         console.log('Payment successful:', response);
       }}
@@ -80,7 +78,7 @@ function App() {
 | Prop | Type | Description |
 |------|------|-------------|
 | `backendUrl` | `string` | Your backend API base URL |
-| `razorpayKeyId` | `string` | Your Razorpay key ID |
+| `stripePublishableKey` | `string` | Your Stripe publishable key |
 
 ### Styling Props
 
@@ -107,7 +105,7 @@ function App() {
 | `notesLabel` | `string` | `"Notes"` | Label for notes field |
 | `submitButtonText` | `string` | `"Pay Now"` | Submit button text |
 | `loadingText` | `string` | `"Processing..."` | Loading state text |
-| `defaultCurrency` | `string` | `"INR"` | Default currency value |
+| `defaultCurrency` | `string` | `"USD"` | Default currency value |
 | `defaultAmount` | `number` | `undefined` | Default amount value |
 
 ### Callback Props
@@ -116,7 +114,7 @@ function App() {
 |------|------|-------------|
 | `onPaymentSuccess` | `(response) => void` | Called when payment succeeds |
 | `onPaymentFailure` | `(error) => void` | Called when payment fails |
-| `onOrderCreated` | `(order) => void` | Called when order is created |
+| `onPaymentIntentCreated` | `(intent) => void` | Called when payment intent is created |
 | `onFormSubmit` | `(data) => void` | Called when form is submitted |
 | `validateForm` | `(data) => string \| null` | Custom form validation |
 
@@ -125,9 +123,9 @@ function App() {
 ### Using CSS Classes
 
 ```tsx
-<RazorpayPaymentForm
+<StripePaymentForm
   backendUrl="https://your-api.com/api"
-  razorpayKeyId="rzp_test_your_key_id"
+  stripePublishableKey="pk_test_your_publishable_key"
   className="my-payment-form"
   formClassName="payment-form"
   inputClassName="form-input"
@@ -170,9 +168,9 @@ function App() {
 ### Using Inline Styles
 
 ```tsx
-<RazorpayPaymentForm
+<StripePaymentForm
   backendUrl="https://your-api.com/api"
-  razorpayKeyId="rzp_test_your_key_id"
+  stripePublishableKey="pk_test_your_publishable_key"
   style={{
     backgroundColor: '#f8fafc',
     padding: '2rem',
@@ -200,31 +198,23 @@ function App() {
 
 Your backend should implement these endpoints:
 
-### POST /order
-Create a new payment order
+### POST /payment-intent/create
+Create a new payment intent
 ```json
 {
-  "amount": 100000,
-  "currency": "INR",
-  "receipt": "receipt_123",
-  "notes": "Payment for order #123"
+  "amount": 123,
+  "currency": "USD",
+  "receipt": "12312",
+  "notes": {
+    "userId": "12312412"
+  }
 }
 ```
 
-### POST /payments/verify
-Verify payment signature
-```json
-{
-  "razorpay_order_id": "order_xxx",
-  "razorpay_payment_id": "pay_xxx",
-  "razorpay_signature": "signature_xxx"
-}
+### POST /payment-intent/verify
+Verify payment intent
 ```
-
-### GET /orders/:orderId
-Get order details
-```
-GET /orders/order_xxx
+POST /payment-intent/verify?paymentIntentId=pi_3S7Z4BITFZzvPAwg06SMJruQ
 ```
 
 ## Advanced Usage
@@ -232,12 +222,12 @@ GET /orders/order_xxx
 ### Custom Validation
 
 ```tsx
-<RazorpayPaymentForm
+<StripePaymentForm
   backendUrl="https://your-api.com/api"
-  razorpayKeyId="rzp_test_your_key_id"
+  stripePublishableKey="pk_test_your_publishable_key"
   validateForm={(data) => {
-    if (data.amount < 100) {
-      return 'Minimum amount is ₹100';
+    if (data.amount < 1) {
+      return 'Minimum amount is $1';
     }
     if (!data.receipt.startsWith('RCP_')) {
       return 'Receipt must start with RCP_';
@@ -250,24 +240,22 @@ GET /orders/order_xxx
 ### Using the Service Directly
 
 ```tsx
-import { createRazorpayService } from '@your-org/razorpay-payment-form';
+import { createStripeService } from '@your-org/stripe-payment-form';
 
-const razorpayService = createRazorpayService('https://your-api.com/api');
+const stripeService = createStripeService('https://your-api.com/api');
 
-// Create order
-const order = await razorpayService.createPaymentByRazorpay({
-  amount: 100000,
-  currency: 'INR',
+// Create payment intent
+const intent = await stripeService.createPaymentIntent({
+  amount: 123,
+  currency: 'USD',
   receipt: 'receipt_123',
-  notes: 'Test payment'
+  notes: {
+    userId: 'user_123'
+  }
 });
 
-// Verify payment
-const verification = await razorpayService.verifyPayment({
-  razorpay_order_id: 'order_xxx',
-  razorpay_payment_id: 'pay_xxx',
-  razorpay_signature: 'signature_xxx'
-});
+// Verify payment intent
+const verification = await stripeService.verifyPaymentIntent('pi_3S7Z4BITFZzvPAwg06SMJruQ');
 ```
 
 ## TypeScript Support
@@ -276,13 +264,13 @@ The package includes full TypeScript definitions:
 
 ```tsx
 import { 
-  RazorpayPaymentForm, 
+  StripePaymentForm, 
   PaymentFormData, 
-  PaymentResponse,
-  RazorpayPaymentFormProps 
-} from '@your-org/razorpay-payment-form';
+  PaymentIntentResponse,
+  StripePaymentFormProps 
+} from '@your-org/stripe-payment-form';
 ```
 
-## importent
+## Important
 
-Ensure that the paths for login and Razorpay match, and configure both to use the proxy.
+Ensure that the paths for login and Stripe match, and configure both to use the proxy.
