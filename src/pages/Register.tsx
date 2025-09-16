@@ -285,7 +285,7 @@ const Register: React.FC = () => {
                         <motion.div
                           animate={{ rotate: 360 }}
                           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                          className="w-6 h-6 border-2 border-white border-t-transparent rounded-full"
+                          className="w-6 h-6 border-2 bg-cyan-700 border-white border-t-transparent rounded-full"
                         />
                         <span>🎭 Creating account...</span>
                       </>
@@ -322,7 +322,7 @@ const Register: React.FC = () => {
                   <motion.div className="mt-4">
                     <Link
                       to="/login"
-                      className="inline-flex items-center gap-2 px-6 py-3 text-white font-bold rounded-2xl transition-all duration-300 shadow-fun"
+                      className="inline-flex bg-teal-700 items-center gap-2 px-6 py-3 text-white font-bold rounded-2xl transition-all duration-300 shadow-fun"
                       style={{ background: theme.gradients.accent }}
                     >
                       <LogIn className="w-5 h-5" />

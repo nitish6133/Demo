@@ -59,7 +59,7 @@ const RazorpayCheckoutButton: React.FC<RazorpayCheckoutButtonProps> = ({
   style,
   disabled = false,
   children,
-  loadingText = 'Processing...',
+  loadingText = 'Processing',
   razorpayKeyId = import.meta.env.VITE_RAZORPAY_KEY_ID,
   companyName = 'Your Company',
   companyLogo,
@@ -117,10 +117,14 @@ const RazorpayCheckoutButton: React.FC<RazorpayCheckoutButtonProps> = ({
             } else {
               throw new Error(verificationResult.message || 'Payment verification failed');
             }
+            
+            // Reset processing state after successful payment
+            setIsProcessing(false);
           } catch (error) {
             console.error('Payment verification error:', error);
             showError('Payment Verification Failed', (error as Error).message);
             onFailure?.(error);
+            setIsProcessing(false);
           }
         },
         prefill: {
@@ -140,6 +144,16 @@ const RazorpayCheckoutButton: React.FC<RazorpayCheckoutButtonProps> = ({
       };
 
       const razorpay = new window.Razorpay(options);
+      
+      // Reset processing state when Razorpay modal opens
+      razorpay.on('payment.success', () => {
+        // This will be handled by the handler above
+      });
+      
+      razorpay.on('payment.error', () => {
+        setIsProcessing(false);
+      });
+      
       razorpay.open();
 
     } catch (error) {

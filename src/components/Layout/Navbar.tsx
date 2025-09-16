@@ -50,14 +50,7 @@ const Navbar: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <Link
-                to="/login"
-                data-testid="login-link"
-                className="text-white bg-sky-800 px-5 py-2 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
-                style={{ background: theme.gradients.primary }}
-              >
-                Login
-              </Link>
+              <></>
             )}
           </div>
         </div>

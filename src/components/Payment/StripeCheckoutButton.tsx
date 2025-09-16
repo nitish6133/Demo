@@ -6,12 +6,12 @@ import { useToast } from "../UI/ToastContainer";
 import StripePaymentForm from "./StripePaymentForm";
 
 interface StripeCheckoutButtonProps {
-  amount: number;                 // required
-  currency: string;               // required
-  receipt: string;                // required
-  notes?: Record<string, any>;    // optional
-  onSuccess?: (result: any) => void; // optional
-  onFailure?: (error: any) => void;  // optional
+  amount: number;                     // required
+  currency: string;                   // required
+  receipt: string;                    // required
+  notes?: Record<string, any>;        // optional
+  onSuccess?: (result: any) => void;  // optional
+  onFailure?: (error: any) => void;   // optional
   className?: string;                 // optional
   style?: React.CSSProperties;        // optional
   disabled?: boolean;                 // optional
@@ -19,7 +19,9 @@ interface StripeCheckoutButtonProps {
   loadingText?: string;               // optional
 }
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
+const stripePromise = loadStripe(
+  import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || ""
+);
 
 const StripeCheckoutButton: React.FC<StripeCheckoutButtonProps> = ({
   amount,
@@ -36,8 +38,6 @@ const StripeCheckoutButton: React.FC<StripeCheckoutButtonProps> = ({
 }) => {
   const [showForm, setShowForm] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [formAmount, setFormAmount] = useState<number>(0);
-  const [formCurrency, setFormCurrency] = useState<string>("");
 
   const { createStripePayment, isLoading } = usePaymentStore();
   const { showError } = useToast();
@@ -50,14 +50,18 @@ const StripeCheckoutButton: React.FC<StripeCheckoutButtonProps> = ({
         receipt,
         notes,
       });
+
       setClientSecret(paymentIntent.clientSecret);
-      setFormAmount(paymentIntent.amount);
-      setFormCurrency(paymentIntent.currency);
       setShowForm(true);
     } catch (err: any) {
       showError("Stripe Error", err.message || "Failed to create payment intent.");
       onFailure?.(err);
     }
+  };
+
+  const handleClose = () => {
+    setShowForm(false);
+    setClientSecret(null);
   };
 
   return (
@@ -70,21 +74,30 @@ const StripeCheckoutButton: React.FC<StripeCheckoutButtonProps> = ({
       >
         {isLoading ? loadingText : children || "Pay with Stripe"}
       </button>
+
       {showForm && clientSecret && (
         <Elements stripe={stripePromise} options={{ clientSecret }}>
-          <div className="fixed top-0 left-0 w-full h-full bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white p-8 rounded shadow w-full max-w-md relative">
-              <button onClick={() => setShowForm(false)} className="absolute top-2 right-3 text-xl">×</button>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-lg">
+              {/* Close Button */}
+              <button
+                onClick={handleClose}
+                className="absolute right-3 top-2 text-2xl leading-none text-gray-500 hover:text-gray-700"
+                aria-label="Close"
+              >
+                ×
+              </button>
+
+              {/* Payment Form */}
               <StripePaymentForm
-                amount={formAmount}
-                currency={formCurrency}
+                amount={amount}
+                currency={currency}
                 clientSecret={clientSecret}
                 onSuccess={(paymentIntent) => {
-                  setShowForm(false);
                   onSuccess?.(paymentIntent);
                 }}
                 onFailure={(error) => {
-                  setShowForm(false);
+                  handleClose();
                   onFailure?.(error);
                 }}
               />
