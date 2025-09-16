@@ -117,13 +117,14 @@ const Login: React.FC<LoginProps> = ({
               style={{ background: theme.gradients.primary }}
             >
               <motion.h2
-                className="text-2xl font-extrabold font-display text-white mb-1"
+                className="text-2xl font-extrabold font-display mb-1"
+                style={{ color: "#6586c9" }}
                 animate={{ scale: [1, 1.05, 1] }}
                 transition={{ duration: 2, repeat: Infinity }}
               >
                 Sign In
               </motion.h2>
-              <p className="text-white/80 font-medium">
+              <p className="text-black/80 font-medium">
                 Enter your magical portal!
               </p>
             </div>
@@ -185,10 +186,13 @@ const Login: React.FC<LoginProps> = ({
                 <motion.button
                   type="submit"
                   disabled={!isFormValid || authLoading}
-                  className={`w-full py-3 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 shadow-fun transition-all duration-300 text-white ${isFormValid && !authLoading ? "cursor-pointer" : "cursor-not-allowed opacity-50"
+                  className={`w-full py-3 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 shadow-fun transition-all duration-300 ${isFormValid && !authLoading
+                    ? "cursor-pointer"
+                    : "cursor-not-allowed opacity-50"
                     }`}
                   style={{
-                    background: isFormValid && !authLoading ? theme.gradients.primary : "#e5e7eb",
+                    background: isFormValid && !authLoading ? theme.gradients.primary : "#6586c9",
+                    color: "white",
                   }}
                   whileHover={
                     isFormValid && !authLoading
@@ -222,11 +226,12 @@ const Login: React.FC<LoginProps> = ({
                   type="button"
                   onClick={handleContinueWithGoogle}
                   loading={isLoading}
-                  className="w-full flex items-center justify-center mt-4"
+                  className="w-full flex items-center justify-center mt-4 rounded-full" // 👈 added rounded-full
                   size="lg"
                   style={{
                     backgroundColor: primaryColor,
                     fontFamily,
+                    borderRadius: "9999px", // 👈 force full round
                     ...(googleLogintheme.buttonStyle || {}),
                   }}
                 >
@@ -261,6 +266,7 @@ const Login: React.FC<LoginProps> = ({
                   </div>
                 </Button>
 
+
               </form>
 
               {/* Divider */}
@@ -279,7 +285,7 @@ const Login: React.FC<LoginProps> = ({
               <div className="mt-6 text-center">
                 <Link
                   to="/register"
-                  className="inline-flex items-center gap-2 px-6 py-3 text-black font-bold rounded-2xl transition-all duration-300 shadow-fun"
+                  className="inline-flex items-center gap-2 px-6 py-3 text-black/80 font-bold rounded-2xl transition-all duration-300 shadow-fun"
                   style={{ background: theme.gradients.secondary }}
                 >
                   <UserPlus className="w-5 h-5" />

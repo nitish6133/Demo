@@ -104,6 +104,7 @@ const HomePage: React.FC = () => {
                 notes={{ productId: "demo-product", userId: "demo-user" }}
                 onSuccess={(result) => console.log("Stripe payment successful", result)}
                 onFailure={(error) => console.error("Stripe payment failed", error)}
+                 className="px-8 py-4 bg-gradient-to-r from-green-500 to-cyan-600 text-white font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 Pay $29.99 with Stripe
               </StripeCheckoutButton>

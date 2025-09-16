@@ -35,8 +35,10 @@ PROJECT_PATH="$CUSTOM_PATH/$PROJECT_NAME"
 # -----------------------------------------------------------------------------
 echo "📂 Creating new project at $PROJECT_PATH..."
 mkdir -p "$PROJECT_PATH"
-cp -r "$TEMPLATE_BASE"/* "$PROJECT_PATH/"
-cp -r "$TEMPLATE_BASE"/.[!.]* "$PROJECT_PATH/" 2>/dev/null || true
+# Copy everything except setup-template.sh and .env.example
+cp -r "$TEMPLATE_BASE"/* "$PROJECT_PATH"/
+rm -f "$PROJECT_PATH/setup-template.sh" "$PROJECT_PATH/.env.example"
+
 
 cd "$PROJECT_PATH" || { echo "❌ Failed to enter $PROJECT_PATH"; exit 1; }
 
@@ -80,7 +82,17 @@ echo "----------------------"
 prompt_with_default "Project name" "My Awesome App" PROJECT_NAME
 prompt_with_default "Project description" "A modern, dynamic application" PROJECT_DESCRIPTION
 prompt_with_default "API Base URL" "http://192.168.0.108:8000" API_BASE_URL
+
+prompt_with_default "RAZORPAY KEY ID" "rzp_test_zRB6kA1NHhW0rc" RAZORPAY_KEY_ID
+prompt_with_default "RAZORPAY KEY SECRET" "pYFKFdtk8xaCBDlyL88KkDEk" RAZORPAY_KEY_SECRET
+prompt_with_default "STRIPE PUBLISHABLE KEY" "pk_test_51Rzw7dITFZzvPAwge03aXMdQ2CR4TNR856vyshQvEgig5pMZSiNc1OhiCHQrrbNIimWwbMQNjGgOrNsZhFdYKGDR00Ds7ctEyt" STRIPE_PUBLISHABLE_KEY
+
 prompt_with_default "API Key" "admin123" API_KEY
+
+
+VITE_RAZORPAY_KEY_ID=rzp_test_zRB6kA1NHhW0rc
+VITE_RAZORPAY_KEY_SECRET=pYFKFdtk8xaCBDlyL88KkDEk
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_51Rzw7dITFZzvPAwge03aXMdQ2CR4TNR856vyshQvEgig5pMZSiNc1OhiCHQrrbNIimWwbMQNjGgOrNsZhFdYKGDR00Ds7ctEyt
 
 echo ""
 echo "🎨 Theme Configuration"
@@ -145,6 +157,10 @@ VITE_PROJECT_DESCRIPTION=$PROJECT_DESCRIPTION
 # API Configuration
 VITE_API_BASE_URL=$API_BASE_URL
 VITE_API_KEY=$API_KEY
+
+VITE_RAZORPAY_KEY_ID=$RAZORPAY_KEY_ID
+VITE_RAZORPAY_KEY_SECRET=$RAZORPAY_KEY_SECRET
+VITE_STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY
 
 # Theme Colors - Primary
 VITE_PRIMARY_50=#f0f9ff
