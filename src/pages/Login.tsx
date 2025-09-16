@@ -8,9 +8,10 @@ import Layout from "../components/Layout/Layout";
 import { useProjectConfig } from "../hooks/useProjectConfig";
 import type { LoginProps } from "../types";
 import Button from "../components/UI/Button";
+import { serviceBaseUrl } from "../constants/appConstants";
 
 const Login: React.FC<LoginProps> = ({
-  backendUrl = import.meta.env.VITE_API_BASE_URL,
+  backendUrl = serviceBaseUrl,
   onSuccess,
   googleLogintheme = {},
   customLayout,
@@ -22,7 +23,7 @@ const Login: React.FC<LoginProps> = ({
     isLoading: authLoading,
     error: authError,
     clearError: clearAuthError,
-    loginWithProvider,
+    loginWithGoogle,
     isLoading, user, verifyTokenAfterLogin, setBackendUrl
   } = useAuthStore();
 
@@ -78,7 +79,7 @@ const Login: React.FC<LoginProps> = ({
   }, [user, onSuccess]);
 
   const handleContinueWithGoogle = () => {
-    loginWithProvider("google");
+    loginWithGoogle();
   };
 
   const {

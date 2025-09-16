@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { Login, logoutService, registerUser, verifyTokenForLoginService, verifyTokenService } from '../services/authService';
 import { RegisterData, User } from '../types/auth';
 import { ApiResponseBlank } from '../types/apiResponse';
+import { serviceBaseUrl } from '../constants/appConstants';
 
 interface AuthState {
     isLoading: boolean;
@@ -20,6 +21,7 @@ interface AuthState {
     verifySessionPeriodically: () => Promise<void>;
     registerUser: (credentials: RegisterData) => Promise<ApiResponseBlank>;
     Login: (username: string, password: string) => Promise<boolean>;
+    loginWithGoogle: () => void;
     clearError: () => void;
     logout: () => void;
     setBackendUrl: (url: string) => void;
@@ -47,7 +49,7 @@ export const useAuthStore = create<AuthState>()(
 
             loginWithProvider: (provider: string) => {
                 const { backendUrl: storeBackendUrl } = get();
-                let backendUrl = storeBackendUrl || import.meta.env.VITE_API_BASE_URL;
+                let backendUrl = storeBackendUrl || serviceBaseUrl;
 
                 if (!backendUrl) {
                     console.error('Backend URL not available');
@@ -66,6 +68,11 @@ export const useAuthStore = create<AuthState>()(
                     console.error("Error during login redirection:", error);
                     set({ isLoading: false });
                 }
+            },
+
+            loginWithGoogle: () => {
+                const { loginWithProvider } = get();
+                loginWithProvider('google');
             },
 
             Login: async (username: string, password: string) => {

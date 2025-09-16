@@ -85,6 +85,8 @@ src/
 ### ✅ Included
 - **Dynamic Theming**: Change colors via environment variables
 - **Authentication**: Login/Register with JWT
+- **Google OAuth**: Login/Register with Google
+- **Payment Integration**: Stripe and Razorpay checkout buttons
 - **Responsive Design**: Mobile-first approach
 - **Modern UI**: Framer Motion animations
 - **Type Safety**: Full TypeScript support
@@ -135,9 +137,50 @@ npm run preview
 | `VITE_PROJECT_NAME` | Project display name | "Dynamic App" |
 | `VITE_PROJECT_DESCRIPTION` | Project description | "A dynamic application template" |
 | `VITE_API_BASE_URL` | Backend API URL | "http://localhost:8080" |
+| `VITE_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key | Required for Stripe payments |
+| `VITE_RAZORPAY_KEY_ID` | Razorpay key ID | Required for Razorpay payments |
 | `VITE_PRIMARY_500` | Primary brand color | "#0ea5e9" |
 | `VITE_SECONDARY_500` | Secondary color | "#22c55e" |
 | `VITE_ACCENT_500` | Accent color | "#f59e0b" |
+
+## 💳 Payment Integration
+
+This template includes ready-to-use payment buttons for both Stripe and Razorpay:
+
+### Stripe Checkout Button
+```tsx
+import { StripeCheckoutButton } from './components/Payment';
+
+<StripeCheckoutButton
+  amount={2999} // Amount in cents
+  currency="USD"
+  receipt="receipt_123"
+  notes={{ productId: 'prod_123' }}
+  onSuccess={(result) => console.log('Success:', result)}
+  onFailure={(error) => console.error('Error:', error)}
+/>
+```
+
+### Razorpay Checkout Button
+```tsx
+import { RazorpayCheckoutButton } from './components/Payment';
+
+<RazorpayCheckoutButton
+  amount={2499} // Amount in rupees
+  currency="INR"
+  receipt="receipt_123"
+  notes={{ productId: 'prod_123' }}
+  onSuccess={(response) => console.log('Success:', response)}
+  onFailure={(error) => console.error('Error:', error)}
+/>
+```
+
+### Payment Flow
+1. **Component** → **Store** → **Service** → **Backend**
+2. Both buttons are fully customizable via CSS classes and props
+3. No forms required - just click and pay
+4. Automatic payment verification
+5. Success/failure callbacks for custom handling
 
 ## 🤝 Contributing
 
