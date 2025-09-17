@@ -93,12 +93,15 @@ const StripeCheckoutButton: React.FC<StripeCheckoutButtonProps> = ({
                 amount={amount}
                 currency={currency}
                 clientSecret={clientSecret}
+                onClose={handleClose}
                 onSuccess={(paymentIntent) => {
                   onSuccess?.(paymentIntent);
+                  // Close the form after successful payment
+                  handleClose();
                 }}
                 onFailure={(error) => {
-                  handleClose();
                   onFailure?.(error);
+                  handleClose();
                 }}
               />
             </div>

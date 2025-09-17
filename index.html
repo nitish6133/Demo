@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title id="dynamic-title">Dynamic App</title>
     <meta name="description" content="A dynamic application template" id="dynamic-description" />
-    
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,13 +14,15 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-    <script>
-      // Update title and description dynamically
-      const projectName = window.VITE_PROJECT_NAME || 'Dynamic App';
-      const projectDescription = window.VITE_PROJECT_DESCRIPTION || 'A dynamic application template';
+    <script type="module">
+      // Import Vite environment variables
+      const projectName = import.meta.env.VITE_PROJECT_NAME || 'Dynamic App';
+      const projectDescription = import.meta.env.VITE_PROJECT_DESCRIPTION || 'A dynamic application template';
+      
+      // Set title and meta description
       document.getElementById('dynamic-title').textContent = projectName;
       document.getElementById('dynamic-description').setAttribute('content', projectDescription);
     </script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

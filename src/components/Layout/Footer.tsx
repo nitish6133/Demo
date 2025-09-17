@@ -28,7 +28,7 @@ const Footer: React.FC = () => {
       {/* Bottom Strip */}
       <div className="relative border-t border-white/30 bg-black/20 backdrop-blur-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row justify-between items-center text-gray-200 font-semibold text-xs sm:text-sm gap-2 sm:gap-0">
-          <span className="drop-shadow text-center sm:text-left">© 2025 Future Citizen. All rights reserved.</span>
+          <span className="drop-shadow text-center sm:text-left">© 2025 {projectName}. All rights reserved.</span>
           <div className="flex items-center gap-2 drop-shadow text-center">
             <span>Powered by</span>
             <img 

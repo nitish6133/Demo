@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { useToast } from "../UI/ToastContainer";
+import { usePaymentStore } from "../../stores/usePaymentStore";
 
 interface StripePaymentFormProps {
   clientSecret: string;
@@ -8,6 +9,7 @@ interface StripePaymentFormProps {
   currency: string;
   onSuccess?: (result: any) => void;
   onFailure?: (error: any) => void;
+  onClose?: () => void;
 }
 
 const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
@@ -16,15 +18,15 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
   currency,
   onSuccess,
   onFailure,
+  onClose,
 }) => {
   const stripe = useStripe();
   const elements = useElements();
   const { showError, showSuccess } = useToast();
+  const { verifyStripePayment } = usePaymentStore();
 
-  const [postalCode, setPostalCode] = useState("");
+
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  console.log("showSuccessDialog", showSuccessDialog)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,10 +38,6 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
       return;
     }
 
-    if (postalCode.trim() === "") {
-      showError("Validation Error", "Postal code is required.");
-      return;
-    }
 
     setIsProcessing(true);
 
@@ -47,11 +45,6 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
       const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
           card: cardElement,
-          billing_details: {
-            address: {
-              postal_code: postalCode.trim(),
-            },
-          },
         },
       });
 
@@ -59,12 +52,29 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
         showError("Payment Failed", error.message || "Payment failed.");
         onFailure?.(error);
       } else if (paymentIntent?.status === "succeeded") {
-        showSuccess(
-          "Payment Successful!",
-          `Your payment of ${(paymentIntent.amount / 100).toFixed(2)} ${paymentIntent.currency.toUpperCase()} has been processed successfully!`
-        );
-        setShowSuccessDialog(true); // ✅ open dialog
-        onSuccess?.(paymentIntent);
+        try {
+          // Verify payment using the store function
+          const verificationResult = await verifyStripePayment(paymentIntent.id);
+          
+          if (verificationResult.result.status === 'succeeded') {
+            showSuccess(
+              "Payment Successful!",
+              `Your payment of ${(paymentIntent.amount / 100).toFixed(2)} ${paymentIntent.currency.toUpperCase()} has been processed successfully!`
+            );
+            onSuccess?.(verificationResult);
+            // Close the form after successful payment
+            setTimeout(() => {
+              onClose?.();
+            }, 2000);
+          } else {
+            showError("Payment Verification Failed", "Payment could not be verified.");
+            onFailure?.(verificationResult);
+          }
+        } catch (verificationError) {
+          console.error('Payment verification error:', verificationError);
+          showError("Payment Verification Failed", (verificationError as Error).message);
+          onFailure?.(verificationError);
+        }
       } else {
         showError("Payment Failed", `Payment status: ${paymentIntent?.status}`);
         onFailure?.(paymentIntent);
@@ -78,64 +88,23 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
   };
 
   return (
-    <>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="card-element" className="block mb-1 font-medium">
-            Card Details
-          </label>
-          <div className="p-2 border rounded">
-            <CardElement id="card-element" options={{ hidePostalCode: true }} />
-          </div>
-        </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label htmlFor="card-element" className="block mb-1 font-medium">
+          Card Details
+        </label>
+      </div>
 
-        <div>
-          <label htmlFor="postal-code" className="block mb-1 font-medium">
-            Postal Code
-          </label>
-          <input
-            id="postal-code"
-            type="text"
-            value={postalCode}
-            onChange={(e) => setPostalCode(e.target.value)}
-            className="w-full px-3 py-2 border rounded"
-            placeholder="Enter postal code"
-            required
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={!stripe || isProcessing}
-          className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {isProcessing
-            ? "Processing..."
-            : `Pay ${(amount / 100).toFixed(2)} ${currency.toUpperCase()}`}
-        </button>
-      </form>
-
-      {/* ✅ Success Dialog */}
-      {showSuccessDialog && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full text-center">
-            <h2 className="text-2xl font-bold text-green-600 mb-2">
-              🎉 Payment Successful!
-            </h2>
-            <p className="text-gray-700 mb-4">
-              Your payment of {(amount / 100).toFixed(2)}{" "}
-              {currency.toUpperCase()} was processed successfully.
-            </p>
-            <button
-              onClick={() => setShowSuccessDialog(false)}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-    </>
+      <button
+        type="submit"
+        disabled={!stripe || isProcessing}
+        className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        {isProcessing
+          ? "Processing..."
+          : `Pay ${(amount / 100).toFixed(2)} ${currency.toUpperCase()}`}
+      </button>
+    </form>
   );
 };
 

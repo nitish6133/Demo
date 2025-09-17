@@ -24,7 +24,7 @@ const Login: React.FC<LoginProps> = ({
     error: authError,
     clearError: clearAuthError,
     loginWithGoogle,
-    isLoading, user, verifyTokenAfterLogin, setBackendUrl
+    user, verifyTokenAfterLogin, setBackendUrl
   } = useAuthStore();
 
   const { showSuccess, showError } = useToast();
@@ -32,6 +32,8 @@ const Login: React.FC<LoginProps> = ({
   const [email, setEmail] = useState("user@123.com");
   const [password, setPassword] = useState("");
   const [isFormValid, setIsFormValid] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  console.log("authError", authError)
 
   useEffect(() => {
     verifyTokenAfterLogin();
@@ -51,12 +53,10 @@ const Login: React.FC<LoginProps> = ({
     e.preventDefault();
     clearAuthError();
 
-    const success = await Login(email, password);
-    if (!success) {
-      showError(
-        "Login Failed",
-        authError || "Invalid credentials. Please try again!"
-      );
+    const result = await Login(email, password);
+
+    if (!result.success) {
+      showError(result.error || "Login failed. Please try again!"); // ✅ safe fallback
     } else {
       showSuccess(
         "Welcome Back!",
@@ -79,7 +79,9 @@ const Login: React.FC<LoginProps> = ({
   }, [user, onSuccess]);
 
   const handleContinueWithGoogle = () => {
+    setGoogleLoading(true);
     loginWithGoogle();
+    setGoogleLoading(false);
   };
 
   const {
@@ -225,7 +227,7 @@ const Login: React.FC<LoginProps> = ({
                 <Button
                   type="button"
                   onClick={handleContinueWithGoogle}
-                  loading={isLoading}
+                  loading={googleLoading}
                   className="w-full flex items-center justify-center mt-4 rounded-full" // 👈 added rounded-full
                   size="lg"
                   style={{

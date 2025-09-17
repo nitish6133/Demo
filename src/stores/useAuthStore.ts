@@ -20,7 +20,7 @@ interface AuthState {
     verifyTokenAfterLogin: () => Promise<void>;
     verifySessionPeriodically: () => Promise<void>;
     registerUser: (credentials: RegisterData) => Promise<ApiResponseBlank>;
-    Login: (username: string, password: string) => Promise<boolean>;
+     Login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
     loginWithGoogle: () => void;
     clearError: () => void;
     logout: () => void;
@@ -80,7 +80,6 @@ export const useAuthStore = create<AuthState>()(
 
                 try {
                     const result = await Login(username, password);
-                    console.log("result", result);
 
                     if (result.success && result.data) {
                         const user: User = result.data;
@@ -95,8 +94,9 @@ export const useAuthStore = create<AuthState>()(
                             email: user.email,
                         });
 
-                        return true;
+                        return { success: true };
                     } else {
+                        const errorMsg = result.error || "Invalid credentials. Please try again!";
                         set({
                             isLoading: false,
                             authState: "invalid",
@@ -105,12 +105,14 @@ export const useAuthStore = create<AuthState>()(
                             user: null,
                             username: null,
                             email: null,
+                            error: errorMsg,
                         });
-                        return false;
+                        return { success: false, error: errorMsg }; // ✅ return the message
                     }
                 } catch (error) {
+                    const errorMsg = (error as Error).message || "Login failed";
                     set({
-                        error: (error as Error).message || "Login failed",
+                        error: errorMsg,
                         isLoading: false,
                         authState: "invalid",
                         isAuthenticated: false,
@@ -119,10 +121,9 @@ export const useAuthStore = create<AuthState>()(
                         username: null,
                         email: null,
                     });
-                    return false;
+                    return { success: false, error: errorMsg }; // ✅ return the message
                 }
             },
-
 
             verifyTokenAfterLogin: async () => {
                 try {
