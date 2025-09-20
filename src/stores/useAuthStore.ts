@@ -20,7 +20,7 @@ interface AuthState {
     verifyTokenAfterLogin: () => Promise<void>;
     verifySessionPeriodically: () => Promise<void>;
     registerUser: (credentials: RegisterData) => Promise<ApiResponseBlank>;
-     Login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+    Login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
     loginWithGoogle: () => void;
     clearError: () => void;
     logout: () => void;

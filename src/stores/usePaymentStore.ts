@@ -117,7 +117,7 @@ export const usePaymentStore = create<PaymentState>((set, get) => ({
       const razorpayService = createRazorpayService(backendUrl);
       
       const response = await razorpayService.createPaymentByRazorpay({
-        amount: data.amount * 100, // Convert to paise
+        amount: data.amount, 
         currency: data.currency,
         receipt: data.receipt,
         notes: data.notes,

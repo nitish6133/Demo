@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { CreditCard, Loader2 } from 'lucide-react';
+import { CreditCard } from 'lucide-react';
 import { usePaymentStore } from '../../stores/usePaymentStore';
 import { useToast } from '../UI/ToastContainer';
+import SuccessDialog from '../UI/SuccessDialog';
+import FailureDialog from '../UI/FailureDialog';
 
 interface RazorpayCheckoutButtonProps {
   amount: number;
@@ -11,17 +13,13 @@ interface RazorpayCheckoutButtonProps {
   notes?: Record<string, any> | string;
   onSuccess?: (response: any) => void;
   onFailure?: (error: any) => void;
-  
-  // Styling options
+
   className?: string;
   style?: React.CSSProperties;
   disabled?: boolean;
-  
-  // Button customization
   children?: React.ReactNode;
   loadingText?: string;
-  
-  // Razorpay-specific options
+
   razorpayKeyId?: string;
   companyName?: string;
   companyLogo?: string;
@@ -59,19 +57,25 @@ const RazorpayCheckoutButton: React.FC<RazorpayCheckoutButtonProps> = ({
   style,
   disabled = false,
   children,
-  loadingText = 'Processing',
+  loadingText = 'Processing...',
   razorpayKeyId = import.meta.env.VITE_RAZORPAY_KEY_ID,
   companyName = 'Your Company',
   companyLogo,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const { createRazorpayOrder, verifyRazorpayPayment, isLoading } = usePaymentStore();
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showFailureDialog, setShowFailureDialog] = useState(false);
+  const [failureMessage, setFailureMessage] = useState('');
+
+  const { createRazorpayOrder, verifyRazorpayPayment } = usePaymentStore();
   const { showSuccess, showError } = useToast();
 
   const handleCheckout = async () => {
     if (!razorpayKeyId) {
       const errorMsg = 'Razorpay key ID is not configured';
       showError('Configuration Error', errorMsg);
+      setFailureMessage(errorMsg);
+      setShowFailureDialog(true);
       onFailure?.(new Error(errorMsg));
       return;
     }
@@ -79,13 +83,11 @@ const RazorpayCheckoutButton: React.FC<RazorpayCheckoutButtonProps> = ({
     setIsProcessing(true);
 
     try {
-      // Load Razorpay script
       const scriptLoaded = await loadRazorpayScript();
       if (!scriptLoaded) {
         throw new Error('Failed to load Razorpay script');
       }
 
-      // Create order
       const order = await createRazorpayOrder({
         amount,
         currency,
@@ -93,7 +95,6 @@ const RazorpayCheckoutButton: React.FC<RazorpayCheckoutButtonProps> = ({
         notes: typeof notes === 'string' ? notes : JSON.stringify(notes || {}),
       });
 
-      // Initialize Razorpay
       const options = {
         key: razorpayKeyId,
         amount: order.amount,
@@ -104,7 +105,6 @@ const RazorpayCheckoutButton: React.FC<RazorpayCheckoutButtonProps> = ({
         order_id: order.orderId,
         handler: async (response: any) => {
           try {
-            // Verify payment
             const verificationResult = await verifyRazorpayPayment({
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
@@ -113,17 +113,23 @@ const RazorpayCheckoutButton: React.FC<RazorpayCheckoutButtonProps> = ({
 
             if (verificationResult.status === 'success') {
               showSuccess('Payment Successful', 'Your payment has been processed successfully!');
+              setShowSuccessDialog(true);
               onSuccess?.(response);
             } else {
-              throw new Error(verificationResult.message || 'Payment verification failed');
+              const msg = verificationResult.message || 'Payment verification failed';
+              showError('Payment Verification Failed', msg);
+              setFailureMessage(msg);
+              setShowFailureDialog(true);
+              onFailure?.(new Error(msg));
             }
-            
-            // Reset processing state after successful payment
-            setIsProcessing(false);
           } catch (error) {
+            const msg = (error as Error).message || 'Payment verification failed';
             console.error('Payment verification error:', error);
-            showError('Payment Verification Failed', (error as Error).message);
+            showError('Payment Verification Failed', msg);
+            setFailureMessage(msg);
+            setShowFailureDialog(true);
             onFailure?.(error);
+          } finally {
             setIsProcessing(false);
           }
         },
@@ -144,28 +150,32 @@ const RazorpayCheckoutButton: React.FC<RazorpayCheckoutButtonProps> = ({
       };
 
       const razorpay = new window.Razorpay(options);
-      
-      // Reset processing state when Razorpay modal opens
-      razorpay.on('payment.success', () => {
-        // This will be handled by the handler above
-      });
-      
+      razorpay.on('payment.success', () => { /* handled in handler */ });
       razorpay.on('payment.error', () => {
         setIsProcessing(false);
       });
-      
-      razorpay.open();
 
+      razorpay.open();
     } catch (error) {
+      const errMsg = (error as Error).message || 'Payment failed';
       console.error('Razorpay checkout error:', error);
-      const errorMessage = (error as Error).message || 'Payment failed';
-      showError('Payment Failed', errorMessage);
+      showError('Payment Failed', errMsg);
+      setFailureMessage(errMsg);
+      setShowFailureDialog(true);
       onFailure?.(error);
       setIsProcessing(false);
     }
   };
 
-  const isButtonDisabled = disabled || isLoading || isProcessing;
+  const handleSuccessDialogClose = () => {
+    setShowSuccessDialog(false);
+  };
+
+  const handleFailureDialogClose = () => {
+    setShowFailureDialog(false);
+  };
+
+  const isButtonDisabled = disabled || isProcessing;
 
   const defaultClassName = `
     inline-flex items-center justify-center px-6 py-3 
@@ -178,30 +188,47 @@ const RazorpayCheckoutButton: React.FC<RazorpayCheckoutButtonProps> = ({
   `.trim();
 
   return (
-    <motion.button
-      onClick={handleCheckout}
-      disabled={isButtonDisabled}
-      className={className || defaultClassName}
-      style={style}
-      whileHover={!isButtonDisabled ? { scale: 1.02 } : {}}
-      whileTap={!isButtonDisabled ? { scale: 0.98 } : {}}
-    >
-      {isProcessing || isLoading ? (
-        <>
-          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-          {loadingText}
-        </>
-      ) : (
-        <>
-          {children || (
-            <>
-              <CreditCard className="w-5 h-5 mr-2" />
-              Pay with Razorpay
-            </>
-          )}
-        </>
+    <>
+      <motion.button
+        onClick={handleCheckout}
+        disabled={isButtonDisabled}
+        className={className || defaultClassName}
+        style={style}
+        whileHover={!isButtonDisabled ? { scale: 1.02 } : {}}
+        whileTap={!isButtonDisabled ? { scale: 0.98 } : {}}
+      >
+        {isProcessing ? (
+          <>
+            {loadingText}
+          </>
+        ) : (
+          <>
+            {children || (
+              <>
+                <CreditCard className="w-5 h-5 mr-2" />
+                Pay with Razorpay
+              </>
+            )}
+          </>
+        )}
+      </motion.button>
+
+      {showSuccessDialog && (
+        <SuccessDialog
+          title="Payment Successful"
+          message="Your payment has been processed successfully."
+          onClose={handleSuccessDialogClose}
+        />
       )}
-    </motion.button>
+
+      {showFailureDialog && (
+        <FailureDialog
+          title="Payment Failed"
+          message={failureMessage}
+          onClose={handleFailureDialogClose}
+        />
+      )}
+    </>
   );
 };
 

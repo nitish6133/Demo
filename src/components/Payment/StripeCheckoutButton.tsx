@@ -39,10 +39,12 @@ const StripeCheckoutButton: React.FC<StripeCheckoutButtonProps> = ({
   const [showForm, setShowForm] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
 
-  const { createStripePayment, isLoading } = usePaymentStore();
+  const { createStripePayment } = usePaymentStore();
+  const [isProcessing, setIsProcessing] = useState(false);
   const { showError } = useToast();
 
   const handleCheckout = async () => {
+    setIsProcessing(true);
     try {
       const paymentIntent = await createStripePayment({
         amount,
@@ -50,12 +52,13 @@ const StripeCheckoutButton: React.FC<StripeCheckoutButtonProps> = ({
         receipt,
         notes,
       });
-
       setClientSecret(paymentIntent.clientSecret);
       setShowForm(true);
     } catch (err: any) {
       showError("Stripe Error", err.message || "Failed to create payment intent.");
       onFailure?.(err);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -68,11 +71,11 @@ const StripeCheckoutButton: React.FC<StripeCheckoutButtonProps> = ({
     <>
       <button
         onClick={handleCheckout}
-        disabled={disabled || isLoading}
+        disabled={disabled || isProcessing}
         className={className}
         style={style}
       >
-        {isLoading ? loadingText : children || "Pay with Stripe"}
+        {isProcessing ? loadingText : children || "Pay with Stripe"}
       </button>
 
       {showForm && clientSecret && (
@@ -94,14 +97,9 @@ const StripeCheckoutButton: React.FC<StripeCheckoutButtonProps> = ({
                 currency={currency}
                 clientSecret={clientSecret}
                 onClose={handleClose}
-                onSuccess={(paymentIntent) => {
-                  onSuccess?.(paymentIntent);
-                  // Close the form after successful payment
-                  handleClose();
-                }}
+                onSuccess={onSuccess} 
                 onFailure={(error) => {
                   onFailure?.(error);
-                  handleClose();
                 }}
               />
             </div>

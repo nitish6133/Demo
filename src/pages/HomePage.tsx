@@ -5,6 +5,7 @@ import { useProjectConfig } from '../hooks/useProjectConfig';
 import { StripeCheckoutButton, RazorpayCheckoutButton } from '../components/Payment';
 import { usePaymentStore } from '../stores/usePaymentStore';
 import { useToast } from '../components/UI/ToastContainer';
+import PushNotificationButton from '../components/PushNotifications/PushNotificationButton';
 
 const HomePage: React.FC = () => {
   const { projectName, projectDescription, theme } = useProjectConfig();
@@ -51,6 +52,15 @@ const HomePage: React.FC = () => {
               Welcome to {projectName}
             </motion.h1>
 
+            {/* Push Notifications */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="mt-8 flex justify-center"
+            >
+              <PushNotificationButton />
+            </motion.div>
 
             {/* Payment Buttons */}
             <motion.div
