@@ -4,6 +4,7 @@ export interface User {
   createdDate: string;
   keycloakId: string;
   username: string;
+  role?: string;
   isEmailVerified?: boolean;
   profilePicture?: string | null;
   provider?: string;

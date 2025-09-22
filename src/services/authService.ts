@@ -52,9 +52,9 @@ export const Login = async (
           id: result.id,
           username: result.username,
           email: result.email,
-          role: result.role,
           createdDate: result.createdDate,
-          keycloakId: result.keycloakId
+          keycloakId: result.keycloakId,
+          role: result.role
         }
       };
     }

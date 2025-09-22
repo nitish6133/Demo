@@ -7,10 +7,12 @@ import PublicRoute from './components/PublicRouter';
 import React from "react";
 import { useAuthStore } from './stores/useAuthStore';
 import HomePage from './pages/HomePage';
+import AdminPage from './pages/AdminPage';
 
 
 function App() {
-  const { user, verifySessionPeriodically, verifyTokenAfterLogin, authState } = useAuthStore();
+  const { user, verifySessionPeriodically, verifyTokenAfterLogin, authState, isAuthenticated } = useAuthStore();
+  const adminRole = import.meta.env.VITE_ADMIN_ROLE || 'admin';
   
   // Verify token on app load
   React.useEffect(() => {
@@ -19,6 +21,22 @@ function App() {
     }
   }, [verifyTokenAfterLogin, authState]);
 
+  // Auto-redirect based on user role after login
+  React.useEffect(() => {
+    if (user && isAuthenticated && authState === 'valid') {
+      const isUserAdmin = user.role === adminRole;
+      const currentPath = window.location.pathname;
+      
+      // If admin is on home page, redirect to admin page
+      if (isUserAdmin && currentPath === '/') {
+        window.history.replaceState(null, '', '/admin');
+      }
+      // If regular user is on admin page, redirect to home
+      else if (!isUserAdmin && currentPath === '/admin') {
+        window.history.replaceState(null, '', '/');
+      }
+    }
+  }, [user, isAuthenticated, authState, adminRole]);
   // Periodic session verification
   React.useEffect(() => {
     if (!user || authState !== 'valid') return;
@@ -53,12 +71,22 @@ function App() {
               }
             />
 
-            {/* Protected routes (only when logged in) */}
+            {/* User-only route */}
             <Route
               path="/"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute userOnly={true}>
                   <HomePage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Admin-only route */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute adminOnly={true}>
+                  <AdminPage />
                 </ProtectedRoute>
               }
             />

@@ -93,7 +93,6 @@ export const useAuthStore = create<AuthState>()(
                             username: user.username,
                             email: user.email,
                         });
-
                         return { success: true };
                     } else {
                         const errorMsg = result.error || "Invalid credentials. Please try again!";
@@ -152,7 +151,6 @@ export const useAuthStore = create<AuthState>()(
                             isAuthenticated: false,
                             isLoggedIn: false,
                         });
-                        console.log("Login verification failed");
                     }
                 } catch (error) {
                     console.error("Error verifying token after login:", error);

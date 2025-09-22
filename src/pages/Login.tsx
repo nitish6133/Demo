@@ -9,6 +9,7 @@ import { useProjectConfig } from "../hooks/useProjectConfig";
 import type { LoginProps } from "../types";
 import Button from "../components/UI/Button";
 import { serviceBaseUrl } from "../constants/appConstants";
+import { useNavigate } from "react-router-dom";
 
 const Login: React.FC<LoginProps> = ({
   backendUrl = serviceBaseUrl,
@@ -24,16 +25,18 @@ const Login: React.FC<LoginProps> = ({
     error: authError,
     clearError: clearAuthError,
     loginWithGoogle,
-    user, verifyTokenAfterLogin, setBackendUrl
+    verifyTokenAfterLogin, setBackendUrl
   } = useAuthStore();
-
+  
+ const user = useAuthStore.getState().user
   const { showSuccess, showError } = useToast();
   const { theme } = useProjectConfig();
-  const [email, setEmail] = useState("user@123.com");
-  const [password, setPassword] = useState("");
+  const navigate = useNavigate();
+  const adminRole = import.meta.env.VITE_ADMIN_ROLE || 'admin';
+  const [email, setEmail] = useState("admin@example.com");
+  const [password, setPassword] = useState("asdf");
   const [isFormValid, setIsFormValid] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  console.log("authError", authError)
 
   useEffect(() => {
     verifyTokenAfterLogin();
@@ -78,6 +81,16 @@ const Login: React.FC<LoginProps> = ({
     }
   }, [user, onSuccess]);
 
+  // Auto-redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      if (user.role === adminRole) {
+        navigate("/admin", { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
+    }
+  }, [user, navigate, adminRole]);
   const handleContinueWithGoogle = () => {
     setGoogleLoading(true);
     loginWithGoogle();
