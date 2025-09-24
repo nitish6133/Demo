@@ -1,0 +1,13 @@
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="FutureFrame icon">
+  <defs>
+    <linearGradient id="ff-grad3" x1="32" y1="24" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4A90E2"/>
+      <stop offset="1" stop-color="#F5A623"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="224" height="224" rx="36" fill="#FFFFFF"/>
+  <rect x="16" y="16" width="224" height="224" rx="36" fill="url(#ff-grad3)" opacity="0.08"/>
+  <circle cx="128" cy="128" r="72" fill="none" stroke="url(#ff-grad3)" stroke-width="16"/>
+  <path d="M64 152a64 64 0 0 1 128 0" fill="none" stroke="#4A90E2" stroke-width="12" stroke-linecap="round"/>
+  <path d="M128 96 L128 64 M128 64 L116 76 M128 64 L140 76" stroke="#F5A623" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
