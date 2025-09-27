@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { Login, logoutService, registerUser, verifyTokenForLoginService, verifyTokenService } from '../services/authService';
 import { RegisterData, User } from '../types/auth';
 import { ApiResponseBlank } from '../types/apiResponse';
+import { serviceBaseUrl } from '../constants/appConstants';
 
 interface AuthState {
     isLoading: boolean;
@@ -14,12 +15,16 @@ interface AuthState {
     isAuthenticated: boolean;
     user: User | null;
     successMessage: string | null;
+    backendUrl: string;
+    loginWithProvider: (provider: string) => void;
     verifyTokenAfterLogin: () => Promise<void>;
     verifySessionPeriodically: () => Promise<void>;
     registerUser: (credentials: RegisterData) => Promise<ApiResponseBlank>;
-    Login: (username: string, password: string) => Promise<boolean>;
+    Login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+    loginWithGoogle: () => void;
     clearError: () => void;
     logout: () => void;
+    setBackendUrl: (url: string) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -36,13 +41,45 @@ export const useAuthStore = create<AuthState>()(
             username: null,
             email: null,
             isLoggedIn: true,
+            backendUrl: '',
+
+            setBackendUrl: (url: string) => {
+                set({ backendUrl: url });
+            },
+
+            loginWithProvider: (provider: string) => {
+                const { backendUrl: storeBackendUrl } = get();
+                let backendUrl = storeBackendUrl || serviceBaseUrl;
+
+                if (!backendUrl) {
+                    console.error('Backend URL not available');
+                    return;
+                }
+
+                // 🔥 Remove trailing slash if it exists
+                backendUrl = backendUrl.replace(/\/+$/, '');
+
+                set({ isLoading: true });
+                try {
+                    const redirectUrl = `${backendUrl}/auth/provider?provider=${provider}`;
+                    window.location.href = redirectUrl;
+                    set({ isLoading: false });
+                } catch (error) {
+                    console.error("Error during login redirection:", error);
+                    set({ isLoading: false });
+                }
+            },
+
+            loginWithGoogle: () => {
+                const { loginWithProvider } = get();
+                loginWithProvider('google');
+            },
 
             Login: async (username: string, password: string) => {
                 set({ isLoading: true, error: null, authState: "checking" });
 
                 try {
                     const result = await Login(username, password);
-                    console.log("result", result);
 
                     if (result.success && result.data) {
                         const user: User = result.data;
@@ -56,9 +93,9 @@ export const useAuthStore = create<AuthState>()(
                             username: user.username,
                             email: user.email,
                         });
-
-                        return true;
+                        return { success: true };
                     } else {
+                        const errorMsg = result.error || "Invalid credentials. Please try again!";
                         set({
                             isLoading: false,
                             authState: "invalid",
@@ -67,12 +104,14 @@ export const useAuthStore = create<AuthState>()(
                             user: null,
                             username: null,
                             email: null,
+                            error: errorMsg,
                         });
-                        return false;
+                        return { success: false, error: errorMsg }; // ✅ return the message
                     }
                 } catch (error) {
+                    const errorMsg = (error as Error).message || "Login failed";
                     set({
-                        error: (error as Error).message || "Login failed",
+                        error: errorMsg,
                         isLoading: false,
                         authState: "invalid",
                         isAuthenticated: false,
@@ -81,10 +120,9 @@ export const useAuthStore = create<AuthState>()(
                         username: null,
                         email: null,
                     });
-                    return false;
+                    return { success: false, error: errorMsg }; // ✅ return the message
                 }
             },
-
 
             verifyTokenAfterLogin: async () => {
                 try {
@@ -113,7 +151,6 @@ export const useAuthStore = create<AuthState>()(
                             isAuthenticated: false,
                             isLoggedIn: false,
                         });
-                        console.log("Login verification failed");
                     }
                 } catch (error) {
                     console.error("Error verifying token after login:", error);
@@ -184,13 +221,22 @@ export const useAuthStore = create<AuthState>()(
             },
 
             logout: async () => {
-                set({ user: null, isLoading: false, authState: "invalid" });
+                set({ isLoading: true });
                 try {
                     const responseCode = await logoutService();
-                    console.log("Logout service response:", responseCode);
-                    set({ authState: "invalid", isAuthenticated: false, isLoggedIn: false });
+                    if (responseCode === 1005) {
+                        set({
+                            isAuthenticated: false,
+                            user: null,
+                            isLoggedIn: false,
+                            isLoading: false,
+                            authState: "invalid"
+                        });
+                    } else {
+                        set({ authState: "invalid", isLoading: false });
+                    }
                 } catch (error) {
-                    console.error("Logout failed:", error);
+                    set({ authState: "invalid", isLoading: false });
                 } finally {
                     useAuthStore.persist.clearStorage();
                     sessionStorage.clear();

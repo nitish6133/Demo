@@ -1,26 +1,18 @@
-export interface Profile {
-  id: string;
-  childImageId: string; 
-  futureRole: string;
-  generatedImageId: string;
-  childName: string;
-  schoolName: string;
-  schoolId: string;
-  status: string;
-  saved: boolean;
-  createdAt?: string; 
-  updatedAt?: string;  
+import type { ReactNode } from "react";
+import { User } from "./auth";
+
+export interface LoginTheme {
+  primaryColor?: string;
+  backgroundColor?: string;
+  fontFamily?: string;
+  buttonStyle?: React.CSSProperties;
 }
 
-export type Role = "Doctor" | "Engineer" | "Teacher" | "Police" | "Astronaut";
-
-export interface ApiResponse<T> {
-  code: number;
-  result: T;
-}
-
-export interface GenerateImageRequest {
-  childImageId: string;
-  childName: string;
-  futureRole: Role;
+export interface LoginProps {
+  backendUrl?: string;
+  onSuccess?: (user: User) => void;
+  googleLogintheme?: LoginTheme;
+  customLayout?: ReactNode;
+  className?: string;
+  children?: ReactNode; 
 }

@@ -1,15 +1,16 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from 'framer-motion';
-import { User, Mail, Lock, Sparkles, ArrowRight, LogIn } from 'lucide-react';
+import { User, Mail, Lock, ArrowRight, LogIn } from 'lucide-react';
 import { useAuthStore } from "../stores/useAuthStore";
 import { useToast } from "../components/UI/ToastContainer";
-import CartoonBackground from "../components/CartoonBackground";
 import Layout from "../components/Layout/Layout";
+import { useProjectConfig } from "../hooks/useProjectConfig";
 
 const Register: React.FC = () => {
   const { registerUser } = useAuthStore();
   const { showSuccess, showError } = useToast();
+  const { theme } = useProjectConfig();
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -66,59 +67,20 @@ const Register: React.FC = () => {
   return (
     <Layout>
       <div className="min-h-screen relative overflow-hidden">
-        <CartoonBackground variant="home" />
 
         {/* Header */}
         <div className="relative overflow-hidden bg-gradient-rainbow">
           <motion.div
-            className="absolute inset-0 bg-gradient-to-r from-green-600/20 via-blue-600/20 to-purple-600/20"
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(to right, ${theme.colors.secondary[600]}20, ${theme.colors.primary[600]}20, ${theme.colors.accent[600]}20)`
+            }}
             animate={{
-              background: [
-                "linear-gradient(to right, rgba(34, 197, 94, 0.2), rgba(59, 130, 246, 0.2), rgba(147, 51, 234, 0.2))",
-                "linear-gradient(to right, rgba(147, 51, 234, 0.2), rgba(34, 197, 94, 0.2), rgba(59, 130, 246, 0.2))",
-                "linear-gradient(to right, rgba(59, 130, 246, 0.2), rgba(147, 51, 234, 0.2), rgba(34, 197, 94, 0.2))"
-              ]
+              opacity: [0.2, 0.4, 0.2]
             }}
             transition={{ duration: 6, repeat: Infinity }}
           />
-          <div className="relative container mx-auto px-4 pt-8 pb-12">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center"
-            >
-              <div className="flex items-center justify-center gap-3 mb-4">
-                <motion.div
-                  className="p-3 bg-white/30 backdrop-blur-sm rounded-2xl shadow-fun"
-                  animate={{ rotate: [0, 360] }}
-                  transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                >
-                  <Sparkles className="w-8 h-8 text-white" />
-                </motion.div>
-                <motion.h1
-                  className="text-4xl sm:text-6xl font-bold font-display text-white"
-                  animate={{
-                    textShadow: [
-                      "0 0 20px rgba(255,255,255,0.5)",
-                      "0 0 30px rgba(255,255,255,0.8)",
-                      "0 0 20px rgba(255,255,255,0.5)"
-                    ]
-                  }}
-                  transition={{ duration: 3, repeat: Infinity }}
-                >
-                  Join the Adventure!
-                </motion.h1>
-              </div>
-              <motion.p
-                className="text-xl text-white/90 font-bold"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-              >
-                Create your account and discover your future!
-              </motion.p>
-            </motion.div>
-          </div>
+
         </div>
 
         {/* Register Form */}
@@ -130,18 +92,22 @@ const Register: React.FC = () => {
             className="w-full max-w-md"
           >
             <motion.div
-              className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-rainbow border-3 border-green-200 overflow-hidden"
+              className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-rainbow border-3 overflow-hidden"
+              style={{ borderColor: theme.colors.secondary[200] }}
               animate={{
                 boxShadow: [
-                  "0 8px 32px rgba(34, 197, 94, 0.3)",
-                  "0 12px 40px rgba(34, 197, 94, 0.5)",
-                  "0 8px 32px rgba(34, 197, 94, 0.3)"
+                  `0 8px 32px ${theme.colors.secondary[500]}50`,
+                  `0 12px 40px ${theme.colors.secondary[500]}80`,
+                  `0 8px 32px ${theme.colors.secondary[500]}50`
                 ]
               }}
               transition={{ duration: 3, repeat: Infinity }}
             >
               {/* Form Header */}
-              <div className="bg-gradient-to-r from-green-500 to-blue-500 p-6 text-center">
+              <div 
+                className="p-6 text-center"
+                style={{ background: theme.gradients.secondary }}
+              >
                 <motion.div
                   animate={{ scale: [1, 1.05, 1] }}
                   transition={{ duration: 2, repeat: Infinity }}
@@ -149,7 +115,7 @@ const Register: React.FC = () => {
                   <h2 className="text-2xl font-bold font-display text-white mb-2">
                     Create Account
                   </h2>
-                  <p className="text-green-100 font-semibold">
+                  <p className="text-white/80 font-semibold">
                     Start your magical journey!
                   </p>
                 </motion.div>
@@ -160,7 +126,10 @@ const Register: React.FC = () => {
                 <form onSubmit={handleRegister} className="space-y-6">
                   {/* Username Input */}
                   <div className="space-y-2">
-                    <label className="block text-lg font-bold text-green-700 mb-2">
+                    <label 
+                      className="block text-lg font-bold mb-2"
+                      style={{ color: theme.colors.secondary[700] }}
+                    >
                       <div className="flex items-center gap-2">
                         <User className="w-5 h-5" />
                         <span>Username</span>
@@ -177,7 +146,11 @@ const Register: React.FC = () => {
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         placeholder="Enter your username"
-                        className="relative w-full px-4 py-3 bg-white border-2 border-green-200 rounded-2xl focus:border-green-400 focus:ring-4 focus:ring-green-100 transition-all duration-300 text-green-800 placeholder-green-400 font-semibold"
+                        className="relative w-full px-4 py-3 bg-white border-2 rounded-2xl transition-all duration-300 font-semibold"
+                        style={{ 
+                          borderColor: theme.colors.secondary[200],
+                          color: theme.colors.secondary[800]
+                        }}
                         required
                       />
                     </div>
@@ -185,7 +158,10 @@ const Register: React.FC = () => {
 
                   {/* Email Input */}
                   <div className="space-y-2">
-                    <label className="block text-lg font-bold text-blue-700 mb-2">
+                    <label 
+                      className="block text-lg font-bold mb-2"
+                      style={{ color: theme.colors.primary[700] }}
+                    >
                       <div className="flex items-center gap-2">
                         <Mail className="w-5 h-5" />
                         <span>Email Address</span>
@@ -202,7 +178,11 @@ const Register: React.FC = () => {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="Enter your email address"
-                        className="relative w-full px-4 py-3 bg-white border-2 border-blue-200 rounded-2xl focus:border-blue-400 focus:ring-4 focus:ring-blue-100 transition-all duration-300 text-blue-800 placeholder-blue-400 font-semibold"
+                        className="relative w-full px-4 py-3 bg-white border-2 rounded-2xl transition-all duration-300 font-semibold"
+                        style={{ 
+                          borderColor: theme.colors.primary[200],
+                          color: theme.colors.primary[800]
+                        }}
                         required
                       />
                     </div>
@@ -210,7 +190,10 @@ const Register: React.FC = () => {
 
                   {/* Password Input */}
                   <div className="space-y-2">
-                    <label className="block text-lg font-bold text-purple-700 mb-2">
+                    <label 
+                      className="block text-lg font-bold mb-2"
+                      style={{ color: theme.colors.accent[700] }}
+                    >
                       <div className="flex items-center gap-2">
                         <Lock className="w-5 h-5" />
                         <span>Password</span>
@@ -227,7 +210,11 @@ const Register: React.FC = () => {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Enter password"
-                        className="relative w-full px-4 py-3 bg-white border-2 border-purple-200 rounded-2xl focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition-all duration-300 text-purple-800 placeholder-purple-400 font-semibold"
+                        className="relative w-full px-4 py-3 bg-white border-2 rounded-2xl transition-all duration-300 font-semibold"
+                        style={{ 
+                          borderColor: theme.colors.accent[200],
+                          color: theme.colors.accent[800]
+                        }}
                         required
                       />
                     </div>
@@ -235,7 +222,10 @@ const Register: React.FC = () => {
 
                   {/* Confirm Password Input */}
                   <div className="space-y-2">
-                    <label className="block text-lg font-bold text-pink-700 mb-2">
+                    <label 
+                      className="block text-lg font-bold mb-2"
+                      style={{ color: theme.colors.primary[700] }}
+                    >
                       <div className="flex items-center gap-2">
                         <Lock className="w-5 h-5" />
                         <span>Confirm Password</span>
@@ -252,7 +242,11 @@ const Register: React.FC = () => {
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="Enter Confirm password"
-                        className="relative w-full px-4 py-3 bg-white border-2 border-pink-200 rounded-2xl focus:border-pink-400 focus:ring-4 focus:ring-pink-100 transition-all duration-300 text-pink-800 placeholder-pink-400 font-semibold"
+                        className="relative w-full px-4 py-3 bg-white border-2 rounded-2xl transition-all duration-300 font-semibold"
+                        style={{ 
+                          borderColor: theme.colors.primary[200],
+                          color: theme.colors.primary[800]
+                        }}
                         required
                       />
                     </div>
@@ -272,14 +266,17 @@ const Register: React.FC = () => {
                   <motion.button
                     type="submit"
                     disabled={!isFormValid || isLoading}
-                    className={`w-full py-4 px-6 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 shadow-fun ${isFormValid && !isLoading
-                        ? 'bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white'
-                        : 'bg-gradient-to-r from-gray-300 to-gray-400 text-gray-600 cursor-not-allowed'
+                    className={`w-full py-4 px-6 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 shadow-fun text-white ${isFormValid && !isLoading
+                        ? 'cursor-pointer'
+                        : 'cursor-not-allowed opacity-50'
                       }`}
+                    style={{
+                      background: isFormValid && !isLoading ? theme.gradients.secondary : '#e5e7eb'
+                    }}
                     whileHover={isFormValid && !isLoading ? {
                       scale: 1.02,
                       y: -2,
-                      boxShadow: "0 20px 40px rgba(34, 197, 94, 0.4)"
+                      boxShadow: `0 20px 40px ${theme.colors.secondary[500]}60`
                     } : {}}
                     whileTap={isFormValid && !isLoading ? { scale: 0.98 } : {}}
                   >
@@ -288,7 +285,7 @@ const Register: React.FC = () => {
                         <motion.div
                           animate={{ rotate: 360 }}
                           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                          className="w-6 h-6 border-2 border-white border-t-transparent rounded-full"
+                          className="w-6 h-6 border-2 bg-cyan-700 border-white border-t-transparent rounded-full"
                         />
                         <span>🎭 Creating account...</span>
                       </>
@@ -310,10 +307,13 @@ const Register: React.FC = () => {
                 >
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-green-200"></div>
+                      <div className="w-full border-t" style={{ borderColor: theme.colors.secondary[200] }}></div>
                     </div>
                     <div className="relative flex justify-center text-sm">
-                      <span className="px-4 bg-white text-green-600 font-semibold">
+                      <span 
+                        className="px-4 bg-white font-semibold"
+                        style={{ color: theme.colors.secondary[600] }}
+                      >
                         Already a hero?
                       </span>
                     </div>
@@ -322,14 +322,18 @@ const Register: React.FC = () => {
                   <motion.div className="mt-4">
                     <Link
                       to="/login"
-                      className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-400 to-pink-500 hover:from-purple-500 hover:to-pink-600 text-white font-bold rounded-2xl transition-all duration-300 shadow-fun"
+                      className="inline-flex bg-teal-700 items-center gap-2 px-6 py-3 text-white font-bold rounded-2xl transition-all duration-300 shadow-fun"
+                      style={{ background: theme.gradients.accent }}
                     >
                       <LogIn className="w-5 h-5" />
                       <span>Sign In</span>
                     </Link>
                   </motion.div>
 
-                  <p className="mt-3 text-sm text-green-600 font-semibold">
+                  <p 
+                    className="mt-3 text-sm font-semibold"
+                    style={{ color: theme.colors.secondary[600] }}
+                  >
                     Already have an account? Sign in here!
                   </p>
                 </motion.div>

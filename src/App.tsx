@@ -1,6 +1,4 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import HomePage from './pages/HomePage';
-import ProfilesPage from './pages/ProfilesPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -8,11 +6,13 @@ import { ToastProvider } from './components/UI/ToastContainer';
 import PublicRoute from './components/PublicRouter';
 import React from "react";
 import { useAuthStore } from './stores/useAuthStore';
-import SchoolProfileForm from './pages/SchoolProfileForm';
+import HomePage from './pages/HomePage';
+import AdminPage from './pages/AdminPage';
 
 
 function App() {
-  const { user, verifySessionPeriodically, verifyTokenAfterLogin, authState } = useAuthStore();
+  const { user, verifySessionPeriodically, verifyTokenAfterLogin, authState, isAuthenticated } = useAuthStore();
+  const adminRole = import.meta.env.VITE_ADMIN_ROLE || 'admin';
   
   // Verify token on app load
   React.useEffect(() => {
@@ -21,6 +21,22 @@ function App() {
     }
   }, [verifyTokenAfterLogin, authState]);
 
+  // Auto-redirect based on user role after login
+  React.useEffect(() => {
+    if (user && isAuthenticated && authState === 'valid') {
+      const isUserAdmin = user.role === adminRole;
+      const currentPath = window.location.pathname;
+      
+      // If admin is on home page, redirect to admin page
+      if (isUserAdmin && currentPath === '/') {
+        window.history.replaceState(null, '', '/admin');
+      }
+      // If regular user is on admin page, redirect to home
+      else if (!isUserAdmin && currentPath === '/admin') {
+        window.history.replaceState(null, '', '/');
+      }
+    }
+  }, [user, isAuthenticated, authState, adminRole]);
   // Periodic session verification
   React.useEffect(() => {
     if (!user || authState !== 'valid') return;
@@ -38,7 +54,6 @@ function App() {
       <Router>
         <div className="relative min-h-screen">
           <Routes>
-            {/* Public routes (only when NOT logged in) */}
             <Route
               path="/login"
               element={
@@ -56,29 +71,22 @@ function App() {
               }
             />
 
-            {/* Protected routes (only when logged in) */}
+            {/* User-only route */}
             <Route
               path="/"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute userOnly={true}>
                   <HomePage />
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/profiles"
-              element={
-                <ProtectedRoute>
-                  <ProfilesPage />
-                </ProtectedRoute>
-              }
-            />
 
+            {/* Admin-only route */}
             <Route
-              path="/schoolProfileForm"
+              path="/admin"
               element={
-                <ProtectedRoute>
-                  <SchoolProfileForm />
+                <ProtectedRoute adminOnly={true}>
+                  <AdminPage />
                 </ProtectedRoute>
               }
             />
