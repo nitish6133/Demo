@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { adminService } from '../services/adminService';
 import type { SubscribedUser, AllUser, NotificationResponse, EmailRequest, AdminTabType } from '../types/admin';
+import { areSubscribedUsersEqual, areAllUsersEqual } from '../utils/userUtils';
 
 interface AdminState {
     // State
@@ -13,7 +14,7 @@ interface AdminState {
     // Actions
     setActiveTab: (tab: AdminTabType) => void;
     fetchAllUsers: () => Promise<void>;
-    fetchSubscribedUsers: () => Promise<void>;
+    fetchSubscribedUsers: () => Promise<SubscribedUser[]>;
     sendNotificationToAll: (message: string) => Promise<NotificationResponse>;
     sendNotificationToUser: (recipientId: string, message: string) => Promise<NotificationResponse>;
     sendEmailToUser: (emailData: EmailRequest) => Promise<NotificationResponse>;
@@ -26,34 +27,41 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     allUsers: [],
     isLoading: false,
     error: null,
-    activeTab: 'sendEmail',
+    activeTab: (typeof window !== 'undefined' && localStorage.getItem('adminActiveTab') as AdminTabType) || 'pushNotification',
 
     setActiveTab: (tab: AdminTabType) => {
         set({ activeTab: tab });
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('adminActiveTab', tab);
+        }
     },
 
     fetchAllUsers: async () => {
-        set({ isLoading: true, error: null });
-
         try {
-            const users = await adminService.getAllUsers();
-            set({ allUsers: users, isLoading: false });
+            const newUsers = await adminService.getAllUsers();
+            const currentUsers = get().allUsers;
+
+            if (!areAllUsersEqual(currentUsers, newUsers)) {
+                set({ allUsers: newUsers });
+            }
         } catch (error) {
             const errorMessage = (error as Error).message || 'Failed to fetch all users';
-            set({ error: errorMessage, isLoading: false });
-            throw error;
+            set({ error: errorMessage });
         }
     },
-    fetchSubscribedUsers: async () => {
-        set({ isLoading: true, error: null });
 
+    fetchSubscribedUsers: async () => {
         try {
-            const users = await adminService.getSubscribedUsers();
-            set({ subscribedUsers: users, isLoading: false });
+            const newUsers = await adminService.getSubscribedUsers();
+            const currentUsers = get().subscribedUsers;
+            if (!areSubscribedUsersEqual(currentUsers, newUsers)) {
+                set({ subscribedUsers: newUsers });
+            }
+            return newUsers;
         } catch (error) {
             const errorMessage = (error as Error).message || 'Failed to fetch subscribed users';
-            set({ error: errorMessage, isLoading: false });
-            throw error;
+            set({ error: errorMessage });
+            return [];
         }
     },
 

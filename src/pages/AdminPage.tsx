@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Bell, Send, Users, MessageSquare } from 'lucide-react';
 import Layout from '../components/Layout/Layout';
@@ -36,11 +36,35 @@ const AdminPage: React.FC = () => {
   const [individualMessages, setIndividualMessages] = useState<Record<string, string>>({});
   const [individualSubjects, setIndividualSubjects] = useState<Record<string, string>>({});
   const [sendingToUser, setSendingToUser] = useState<string | null>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
 
   useEffect(() => {
-    fetchAllUsers();
-    fetchSubscribedUsers();
-  }, []);
+    // Clear any previous interval
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+
+    if (activeTab === 'pushNotification') {
+      fetchSubscribedUsers();
+      pollingIntervalRef.current = setInterval(() => {
+        fetchSubscribedUsers();
+      }, 5000);
+    } else if (activeTab === 'sendEmail') {
+      fetchAllUsers();
+      pollingIntervalRef.current = setInterval(() => {
+        fetchAllUsers();
+      }, 5000);
+    }
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, [activeTab, fetchAllUsers, fetchSubscribedUsers]);
+
 
   useEffect(() => {
     if (error) {
@@ -55,7 +79,25 @@ const AdminPage: React.FC = () => {
     setBulkSubject('');
     setIndividualMessages({});
     setIndividualSubjects({});
+
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+
+    if (tab === 'pushNotification') {
+      fetchSubscribedUsers();
+      pollingIntervalRef.current = setInterval(() => {
+        fetchSubscribedUsers();
+      }, 5000);
+    } else if (tab === 'sendEmail') {
+      fetchAllUsers();
+      pollingIntervalRef.current = setInterval(() => {
+        fetchAllUsers();
+      }, 5000);
+    }
   };
+
 
   const handleBulkSend = async () => {
     if (!bulkMessage.trim()) {
@@ -81,7 +123,7 @@ const AdminPage: React.FC = () => {
         }
       } else {
         // For email, we need to send to each user individually since we only have single email endpoint
-        const emailPromises = allUsers.map(user => 
+        const emailPromises = allUsers.map(user =>
           sendEmailToUser({
             email: user.email,
             subject: bulkSubject,
@@ -106,7 +148,7 @@ const AdminPage: React.FC = () => {
   const handleIndividualSend = async (userId: string, userEmail: string) => {
     const message = individualMessages[userId];
     const subject = individualSubjects[userId];
-     console.log("userId", userId)
+    console.log("userId", userId)
 
     if (!message?.trim()) {
       showError('Validation Error', 'Please enter a message');
@@ -138,7 +180,7 @@ const AdminPage: React.FC = () => {
           templateName: 'generalTemplate.html',
           isHtml: true
         });
-        
+
         if (response.code === 1051) {
           showSuccess('Success', 'Email sent successfully!');
           setIndividualMessages(prev => ({ ...prev, [userId]: '' }));
@@ -172,7 +214,6 @@ const AdminPage: React.FC = () => {
   };
 
   const users = getUsersForTab();
-  console.log("users", users)
 
   return (
     <Layout>
@@ -210,11 +251,10 @@ const AdminPage: React.FC = () => {
               <button
                 onClick={() => handleTabChange('sendEmail')}
                 data-testid="send-email-tab-button"
-                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
-                  activeTab === 'sendEmail'
+                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${activeTab === 'sendEmail'
                     ? 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white shadow-lg'
                     : 'text-gray-600 hover:bg-gray-100'
-                }`}
+                  }`}
               >
                 <Mail className="w-5 h-5" />
                 Send Email
@@ -222,11 +262,10 @@ const AdminPage: React.FC = () => {
               <button
                 onClick={() => handleTabChange('pushNotification')}
                 data-testid="push-notification-tab-button"
-                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
-                  activeTab === 'pushNotification'
+                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${activeTab === 'pushNotification'
                     ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg'
                     : 'text-gray-600 hover:bg-gray-100'
-                }`}
+                  }`}
               >
                 <Bell className="w-5 h-5" />
                 Push Notification
@@ -346,11 +385,10 @@ const AdminPage: React.FC = () => {
                                   </span>
                                 )}
                                 {activeTab === 'pushNotification' && 'subscribed' in user && (
-                                  <span className={`inline-block px-2 py-1 text-xs rounded-full ${
-                                    user.subscribed 
-                                      ? 'bg-green-100 text-green-800' 
+                                  <span className={`inline-block px-2 py-1 text-xs rounded-full ${user.subscribed
+                                      ? 'bg-green-100 text-green-800'
                                       : 'bg-red-100 text-red-800'
-                                  }`}>
+                                    }`}>
                                     {user.subscribed ? 'Subscribed' : 'Unsubscribed'}
                                   </span>
                                 )}
@@ -383,11 +421,10 @@ const AdminPage: React.FC = () => {
                                 onClick={() => handleIndividualSend(userId, user.email)}
                                 disabled={sendingToUser === userId}
                                 data-testid={`send-to-user-button-${userId}`}
-                                className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300 whitespace-nowrap ${
-                                  activeTab === 'pushNotification'
+                                className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300 whitespace-nowrap ${activeTab === 'pushNotification'
                                     ? 'bg-green-500 hover:bg-green-600 text-white'
                                     : 'bg-blue-500 hover:bg-blue-600 text-white'
-                                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                               >
                                 {sendingToUser === userId ? (
                                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
