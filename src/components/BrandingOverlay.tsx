@@ -10,7 +10,7 @@ const BrandingOverlay: React.FC = () => {
       {/* Top Left Logo */}
       <div className="absolute top-8 left-8 z-10">
         <div className="flex items-center text-white drop-shadow-lg">
-          {settings.logoUrl ? (
+          {settings?.logoUrl ? (
             <img
               src={settings.logoUrl}
               alt="School logo"
@@ -22,10 +22,10 @@ const BrandingOverlay: React.FC = () => {
             </div>
           )}
           <div>
-            <h1 className="text-2xl font-bold">{settings.schoolName}</h1>
-            <p className="text-sm opacity-90">{settings.tagline}</p>
-            {settings.address && (
-              <p className="text-xs opacity-75">{settings.address}</p>
+            <h1 className="text-2xl font-bold">{settings?.schoolName}</h1>
+            <p className="text-sm opacity-90">{settings?.tagline}</p>
+            {settings?.address && (
+              <p className="text-xs opacity-75">{settings?.address}</p>
             )}
           </div>
         </div>
@@ -40,13 +40,14 @@ const BrandingOverlay: React.FC = () => {
           <p className="text-sm opacity-75">
             Future Frame Citizens
           </p>
-          {settings.hashtags.length > 0 && (
+          {settings?.hashtags?.length ? (
             <p className="text-xs opacity-60 mt-1">
               {settings.hashtags.join(' ')}
             </p>
-          )}
+          ) : null}
         </div>
       </div>
+
     </>
   );
 };

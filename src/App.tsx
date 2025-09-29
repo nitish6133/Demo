@@ -1,19 +1,17 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
-import Register from './pages/Register';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ToastProvider } from './components/UI/ToastContainer';
 import PublicRoute from './components/PublicRouter';
 import React from "react";
 import { useAuthStore } from './stores/useAuthStore';
-import HomePage from './pages/HomePage';
 import AdminPage from './pages/AdminPage';
 import Teacher from './pages/Teacher';
 import TV from './pages/TV';
 import BrandingSettings from './pages/BrandingSettings';
 import BrandingSetup from './components/BrandingSetup';
 import GeneratedContent from './pages/GeneratedContent';
-
+import Register from './pages/Register';
 
 function App() {
   const { user, verifySessionPeriodically, verifyTokenAfterLogin, authState, isAuthenticated } = useAuthStore();
@@ -32,27 +30,27 @@ function App() {
       const isUserAdmin = user.role === adminRole;
       const currentPath = window.location.pathname;
       
-      // If admin is on home page, redirect to admin page
-      if (isUserAdmin && currentPath === '/') {
+      // If admin is on branding-setup page, redirect to admin page
+      if (isUserAdmin && currentPath === '/branding-setup') {
         window.history.replaceState(null, '', '/admin');
       }
-      // If regular user is on admin page, redirect to home
+      // If regular user is on admin page, redirect to branding-setup
       else if (!isUserAdmin && currentPath === '/admin') {
-        window.history.replaceState(null, '', '/');
+        window.history.replaceState(null, '', '/branding-setup');
       }
     }
   }, [user, isAuthenticated, authState, adminRole]);
+
   // Periodic session verification
   React.useEffect(() => {
     if (!user || authState !== 'valid') return;
 
     const interval = setInterval(() => {
       verifySessionPeriodically();
-    }, 5000); // Check every 30 seconds instead of 5
+    }, 30000); // Check every 30 seconds
 
     return () => clearInterval(interval);
   }, [user, verifySessionPeriodically, authState]);
-
 
   return (
     <ToastProvider>
@@ -67,22 +65,13 @@ function App() {
                 </PublicRoute>
               }
             />
-            <Route
+
+              <Route
               path="/register"
               element={
                 <PublicRoute>
                   <Register />
                 </PublicRoute>
-              }
-            />
-
-            {/* User-only route */}
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute userOnly={true}>
-                  <HomePage />
-                </ProtectedRoute>
               }
             />
 
@@ -96,7 +85,17 @@ function App() {
               }
             />
 
-            {/* New protected routes for Future Frame features */}
+            {/* User-only route - Branding Setup */}
+            <Route
+              path="/branding-setup"
+              element={
+                <ProtectedRoute userOnly={true}>
+                  <BrandingSetup />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Protected routes for Future Frame features */}
             <Route
               path="/teacher"
               element={
@@ -130,14 +129,6 @@ function App() {
               }
             />
             <Route
-              path="/branding-setup"
-              element={
-                <ProtectedRoute>
-                  <BrandingSetup />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/generated-content"
               element={
                 <ProtectedRoute>
@@ -145,6 +136,9 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            {/* Default redirect */}
+            <Route path="/" element={<Login />} />
           </Routes>
         </div>
       </Router>

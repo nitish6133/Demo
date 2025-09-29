@@ -1,33 +1,82 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GraduationCap, Upload, ArrowRight, School } from 'lucide-react';
 import { useBrandingStore } from '../stores/useBrandingStore';
 import Footer from './Footer';
+import { getLogoUrl } from '../utils/imageUtils';
+
+
 
 const BrandingSetup: React.FC = () => {
   const navigate = useNavigate();
-  const { settings, updateSettings, uploadLogo, isLoading } = useBrandingStore();
-  const [schoolName, setSchoolName] = useState(settings.schoolName);
-  const [tagline, setTagline] = useState('Inspiring Tomorrow\'s Leaders');
+  const { settings, updateSettings, uploadimage, isLoading, loadSettings, submitSchoolProfile } = useBrandingStore();
+  console.log("settings", settings)
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // local state mirrors store settings
+  const [schoolName, setSchoolName] = useState('');
+  const [tagline, setTagline] = useState('');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (logoPreviewUrl) {
+        URL.revokeObjectURL(logoPreviewUrl);
+      }
+    };
+  }, [logoPreviewUrl]);
+
+  // load backend settings on mount
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  // update local state when settings load
+  useEffect(() => {
+    if (settings) {
+      setSchoolName(settings.name || '');
+      setTagline(settings.branding.tagline || '');
+    }
+  }, [settings]);
+
+  const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      await uploadLogo(file);
+      setLogoFile(file);
+      // Create a preview URL and clean up previous
+      const previewUrl = URL.createObjectURL(file);
+      setLogoPreviewUrl(previewUrl);
     }
   };
 
-  const handleContinue = () => {
-    updateSettings({
-      schoolName,
-      tagline
-    });
-    navigate('/teacher');
-  };
+
+  const handleContinue = async () => {
+    
+const freshSettings = useBrandingStore.getState().settings;
+
+let logoUrl = freshSettings?.branding.logoUrl || null;
+
+const updatedBranding = {
+  ...freshSettings?.branding,
+  logoUrl,
+  tagline: tagline,
+  hashTags: freshSettings?.branding.hashTags ?? null, // or null if you want
+};
+
+updateSettings({ name: schoolName, branding: updatedBranding });
+
+  await submitSchoolProfile();
+  navigate('/teacher');
+};
+
+
 
   const handleSkip = () => {
     navigate('/teacher');
   };
+
+  // Get the display logo URL
+  const logoDisplayUrl = getLogoUrl(settings?.branding?.logoUrl ?? undefined);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4 pb-16">
@@ -81,21 +130,22 @@ const BrandingSetup: React.FC = () => {
               School Logo (Optional)
             </label>
 
-            {settings.logoUrl && (
+            {(logoPreviewUrl || logoDisplayUrl) && (
               <div className="mb-4">
                 <img
-                  src={settings.logoUrl}
+                  src={logoPreviewUrl || logoDisplayUrl}
                   alt="School logo"
                   className="w-24 h-24 object-contain border border-gray-200 rounded-lg mx-auto"
                 />
               </div>
             )}
 
+
             <div className="flex justify-center">
               <input
                 type="file"
                 accept="image/*"
-                onChange={handleLogoUpload}
+                onChange={handleLogoSelect}
                 className="hidden"
                 id="logo-upload"
                 disabled={isLoading}
@@ -105,7 +155,7 @@ const BrandingSetup: React.FC = () => {
                 className="flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg cursor-pointer transition duration-200 disabled:opacity-50"
               >
                 <Upload className="w-4 h-4 mr-2" />
-                {isLoading ? 'Uploading...' : settings.logoUrl ? 'Change Logo' : 'Upload Logo'}
+                {isLoading ? 'Uploading...' : logoDisplayUrl ? 'Change Logo' : 'Upload Logo'}
               </label>
             </div>
           </div>
@@ -114,9 +164,9 @@ const BrandingSetup: React.FC = () => {
           <div className="bg-gray-900 rounded-lg p-4 text-white">
             <h3 className="text-sm font-medium text-gray-300 mb-2">Preview</h3>
             <div className="flex items-center">
-              {settings.logoUrl ? (
+              {logoPreviewUrl || logoDisplayUrl ? (
                 <img
-                  src={settings.logoUrl}
+                  src={logoPreviewUrl || logoDisplayUrl}
                   alt="Logo"
                   className="w-10 h-10 object-contain bg-white/20 backdrop-blur-sm rounded-full p-2 mr-3"
                 />

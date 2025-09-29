@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, School, MapPin, Hash, Upload, X, Plus, Save, AlertCircle } from 'lucide-react';
+import { ArrowLeft, School, MapPin, Hash, Upload, X, Plus, Save, AlertCircle, LogOut } from 'lucide-react';
 import { useBrandingStore } from '../stores/useBrandingStore';
+import { useAuthStore } from '../stores/useAuthStore';
 import Footer from '../components/Footer';
+import { getLogoUrl } from '../utils/imageUtils';
 
 const BrandingSettings: React.FC = () => {
   const {
@@ -11,14 +13,17 @@ const BrandingSettings: React.FC = () => {
     error,
     loadSettings,
     saveSettings,
-    uploadLogo,
+    uploadimage,
     updateSettings,
     addHashtag,
     removeHashtag,
     clearError
   } = useBrandingStore();
+
+  const { logout } = useAuthStore();
   const [newHashtag, setNewHashtag] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const logoDisplayUrl = getLogoUrl(settings?.branding?.logoUrl ?? undefined);
 
   useEffect(() => {
     loadSettings();
@@ -34,7 +39,7 @@ const BrandingSettings: React.FC = () => {
   }, [error, clearError]);
 
   const handleSchoolNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateSettings({ schoolName: e.target.value });
+    updateSettings({ name: e.target.value });
     setHasUnsavedChanges(true);
   };
 
@@ -55,8 +60,8 @@ const BrandingSettings: React.FC = () => {
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      await uploadLogo(file);
-      setHasUnsavedChanges(false); // Logo upload automatically saves
+      await uploadimage(file);
+      setHasUnsavedChanges(false);
     }
   };
 
@@ -75,18 +80,29 @@ const BrandingSettings: React.FC = () => {
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-2xl mx-auto px-4 py-4">
-          <div className="flex items-center">
-            <Link
-              to="/teacher"
-              className="flex items-center px-3 py-2 text-gray-600 hover:text-gray-800 rounded-lg transition duration-200 mr-4"
-            >
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              <span className="text-sm font-medium">Back</span>
-            </Link>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">School Branding</h1>
-              <p className="text-sm text-gray-600">Customize your school's appearance</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Link
+                to="/teacher"
+                className="flex items-center px-3 py-2 text-gray-600 hover:text-gray-800 rounded-lg transition duration-200 mr-4"
+              >
+                <ArrowLeft className="w-4 h-4 mr-1" />
+                <span className="text-sm font-medium">Back</span>
+              </Link>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">School Branding</h1>
+                <p className="text-sm text-gray-600">Customize your school's appearance</p>
+              </div>
             </div>
+
+            {/* Logout Button */}
+            <button
+              onClick={logout}
+              className="flex items-center px-3 py-2 text-gray-600 hover:text-gray-800 rounded-lg transition duration-200"
+            >
+              <LogOut className="w-4 h-4 mr-1" />
+              <span className="text-sm font-medium">Logout</span>
+            </button>
           </div>
         </div>
       </header>
@@ -140,7 +156,7 @@ const BrandingSettings: React.FC = () => {
             </div>
             <input
               type="text"
-              value={settings.schoolName}
+              value={settings?.name}
               onChange={handleSchoolNameChange}
               className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter school name"
@@ -154,10 +170,10 @@ const BrandingSettings: React.FC = () => {
               <h2 className="text-lg font-semibold text-gray-900">School Logo</h2>
             </div>
 
-            {settings.logoUrl && (
+            {settings?.branding?.logoUrl && (
               <div className="mb-4">
                 <img
-                  src={settings.logoUrl}
+                  src={logoDisplayUrl}
                   alt="School logo"
                   className="w-32 h-32 object-contain border border-gray-200 rounded-lg"
                 />
@@ -177,12 +193,12 @@ const BrandingSettings: React.FC = () => {
                 className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg cursor-pointer transition duration-200"
               >
                 <Upload className="w-4 h-4 mr-2" />
-                {settings.logoUrl ? 'Change Logo' : 'Upload Logo'}
+                {settings?.branding?.logoUrl ? 'Change Logo' : 'Upload Logo'}
               </label>
-              {settings.logoUrl && (
+              {settings?.branding?.logoUrl && (
                 <button
                   onClick={() => {
-                    updateSettings({ logoUrl: undefined });
+                    updateSettings({ branding: { ...settings.branding, logoUrl: '' } });
                     setHasUnsavedChanges(true);
                   }}
                   className="ml-3 px-4 py-2 text-red-600 hover:text-red-700 border border-red-300 hover:border-red-400 rounded-lg transition duration-200"
@@ -200,7 +216,7 @@ const BrandingSettings: React.FC = () => {
               <h2 className="text-lg font-semibold text-gray-900">School Address</h2>
             </div>
             <textarea
-              value={settings.address}
+              value={settings?.address}
               onChange={handleAddressChange}
               rows={3}
               className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -215,16 +231,15 @@ const BrandingSettings: React.FC = () => {
               <h2 className="text-lg font-semibold text-gray-900">Hashtags</h2>
             </div>
 
-            {/* Current Hashtags */}
             <div className="flex flex-wrap gap-2 mb-4">
-              {settings.hashtags.map((hashtag, index) => (
+              {/* Ensure hashtags default to an empty array if undefined */}
+              {(settings?.branding?.hashTags || []).map((hashtag, index) => (
                 <div
                   key={index}
-                  className={`flex items-center px-3 py-1 rounded-full text-sm ${
-                    hashtag === '#yensisolutions'
-                      ? 'bg-purple-100 text-purple-800'
-                      : 'bg-blue-100 text-blue-800'
-                  }`}
+                  className={`flex items-center px-3 py-1 rounded-full text-sm ${hashtag === '#yensisolutions'
+                    ? 'bg-purple-100 text-purple-800'
+                    : 'bg-blue-100 text-blue-800'
+                    }`}
                 >
                   <span>{hashtag}</span>
                   {hashtag !== '#yensisolutions' && (
@@ -256,6 +271,7 @@ const BrandingSettings: React.FC = () => {
                 Add
               </button>
             </form>
+
           </div>
 
           {/* Preview */}
@@ -264,9 +280,9 @@ const BrandingSettings: React.FC = () => {
             <div className="bg-gray-900 rounded-lg p-6 text-white relative overflow-hidden">
               {/* Mock TV View Preview */}
               <div className="flex items-center mb-4">
-                {settings.logoUrl ? (
+                {settings?.branding?.logoUrl ? (
                   <img
-                    src={settings.logoUrl}
+                    src={logoDisplayUrl}
                     alt="Logo"
                     className="w-12 h-12 object-contain bg-white/20 backdrop-blur-sm rounded-full p-2 mr-3"
                   />
@@ -276,23 +292,24 @@ const BrandingSettings: React.FC = () => {
                   </div>
                 )}
                 <div>
-                  <h3 className="text-lg font-bold">{settings.schoolName}</h3>
+                  <h3 className="text-lg font-bold">{settings?.name}</h3>
                   <p className="text-sm opacity-90">Future Frame Program</p>
                 </div>
               </div>
 
-              {settings.address && (
+              {settings?.address && (
                 <div className="text-sm opacity-75 mb-2">
                   <MapPin className="w-3 h-3 inline mr-1" />
                   {settings.address}
                 </div>
               )}
 
-              {settings.hashtags.length > 0 && (
+              {settings?.branding?.hashTags && settings.branding.hashTags.length > 0 && (
                 <div className="text-sm opacity-75">
-                  {settings.hashtags.join(' ')}
+                  {settings.branding.hashTags.join(' ')}
                 </div>
               )}
+
             </div>
           </div>
         </div>

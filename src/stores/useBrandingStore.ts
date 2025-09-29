@@ -1,52 +1,52 @@
 import { create } from 'zustand';
-import { brandingApi } from '../api/branding';
-
-export interface BrandingSettings {
-  schoolName: string;
-  logoUrl?: string;
-  tagline: string;
-  address: string;
-  hashtags: string[];
-}
+import { createOrUpdateSchoolProfile, getBrandingSettings, updateBrandingSettings, uploadLogo } from '../services/brandingService';
+import { Branding, BrandingSettings, SchoolProfileRequest } from '../types/branding';
 
 interface BrandingStore {
-  settings: BrandingSettings;
+  settings: BrandingSettings | null;
   isLoading: boolean;
   error: string | null;
 
-  // API actions
   loadSettings: () => Promise<void>;
   saveSettings: () => Promise<void>;
-  uploadLogo: (file: File) => Promise<void>;
-
-  // Local actions
+  uploadimage: (file: File) => Promise<void>;
   updateSettings: (settings: Partial<BrandingSettings>) => void;
   addHashtag: (hashtag: string) => void;
   removeHashtag: (index: number) => void;
+  submitSchoolProfile: () => Promise<void>;
   clearError: () => void;
 }
 
 export const useBrandingStore = create<BrandingStore>((set, get) => ({
-  settings: {
-    schoolName: 'Future Frame Academy',
-    logoUrl: undefined,
-    tagline: 'Inspiring Tomorrow\'s Leaders',
-    address: '123 Education Street, Learning City, LC 12345',
-    hashtags: ['#FutureFrame', '#FutureLeaders', '#Education', '#yensisolutions'],
-  },
+  settings: null,
   isLoading: false,
   error: null,
 
   loadSettings: async () => {
     try {
       set({ isLoading: true, error: null });
-      const settings = await brandingApi.getBrandingSettings();
-      set({ settings, isLoading: false });
+      const response = await getBrandingSettings();
+      if ((response.code === 200 || response.code === 3025) && response.result) {
+        const schoolProfile = response.result;
+        const branding: Branding = {
+          tagline: schoolProfile.branding?.tagline || '',
+          logoUrl: schoolProfile.branding?.logoUrl || null,
+          hashTags: schoolProfile.branding?.hashTags || null,
+        };
+        const loadedSettings: BrandingSettings = {
+          name: schoolProfile.name || '',
+          branding,
+          id: schoolProfile.id,
+          address: schoolProfile.address || undefined,
+          createdAt: schoolProfile.createdAt || undefined,
+          updatedAt: schoolProfile.updatedAt || undefined,
+        };
+        set({ settings: loadedSettings, isLoading: false });
+      } else {
+        set({ error: response.message || 'Failed to load settings', isLoading: false });
+      }
     } catch (error) {
-      set({
-        error: error instanceof Error ? error.message : 'Failed to load settings',
-        isLoading: false
-      });
+      set({ error: error instanceof Error ? error.message : 'Failed to load settings', isLoading: false });
     }
   },
 
@@ -54,68 +54,129 @@ export const useBrandingStore = create<BrandingStore>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       const { settings } = get();
-      const updatedSettings = await brandingApi.updateBrandingSettings(settings);
-      set({ settings: updatedSettings, isLoading: false });
+      if (!settings) throw new Error('No branding settings available');
+      if (!settings.id) throw new Error('Branding settings id is missing');
+      const response = await updateBrandingSettings(settings.id, settings);
+      if (response.code === 200 && response.result) {
+        set({ settings: response.result, isLoading: false });
+      } else {
+        set({ error: response.message || 'Failed to save settings', isLoading: false });
+      }
     } catch (error) {
-      set({
-        error: error instanceof Error ? error.message : 'Failed to save settings',
-        isLoading: false
-      });
+      set({ error: error instanceof Error ? error.message : 'Failed to save settings', isLoading: false });
     }
   },
 
-  uploadLogo: async (file: File) => {
+  uploadimage: async (file: File) => {
     try {
       set({ isLoading: true, error: null });
-      const { logoUrl } = await brandingApi.uploadLogo(file);
-      const { settings } = get();
-      const updatedSettings = { ...settings, logoUrl };
+      const response = await uploadLogo(file);
 
-      // Save the updated settings with new logo
-      const savedSettings = await brandingApi.updateBrandingSettings(updatedSettings);
-      set({ settings: savedSettings, isLoading: false });
+      if ((response.code === 200 || response.code === 3003) && response.result) {
+        const logoUrl = response.result.logoUrl;
+
+        set(state => {
+          const updatedBranding: Branding = {
+            logoUrl: logoUrl || null,
+            tagline: state.settings?.branding?.tagline ?? "",
+            hashTags: state.settings?.branding?.hashTags || null,
+          };
+
+          const updatedSettings: BrandingSettings = {
+            ...state.settings,
+            name: state.settings?.name ?? "",  // Required string, fallback to empty string if undefined
+            branding: updatedBranding,
+          };
+
+          console.log("updatedSettings", updatedSettings);
+
+          return { settings: updatedSettings, isLoading: false };
+        });
+      } else {
+        set({ error: response.message || 'Failed to upload logo', isLoading: false });
+      }
     } catch (error) {
-      set({
-        error: error instanceof Error ? error.message : 'Failed to upload logo',
-        isLoading: false
-      });
+      set({ error: error instanceof Error ? error.message : 'Failed to upload logo', isLoading: false });
     }
   },
 
-  updateSettings: (newSettings: Partial<BrandingSettings>) => {
-    set((state) => ({
-      settings: { ...state.settings, ...newSettings }
+
+  updateSettings: (updates: Partial<BrandingSettings>) => {
+    set(state => ({
+      settings: state.settings ? { ...state.settings, ...updates } : { name: '', tagline: '', hashtags: [], ...updates } as BrandingSettings,
     }));
   },
 
   addHashtag: (hashtag: string) => {
-    const cleanHashtag = hashtag.startsWith('#') ? hashtag : `#${hashtag}`;
-    set((state) => ({
-      settings: {
-        ...state.settings,
-        hashtags: [...state.settings.hashtags, cleanHashtag]
-      }
-    }));
+    set(state => {
+      const updatedHashtags = state.settings?.branding?.hashTags
+        ? [...state.settings.branding.hashTags, `#${hashtag}`]
+        : [`#${hashtag}`];
+      return {
+        settings: {
+          ...state.settings,
+          branding: {
+            ...state.settings?.branding,
+            hashTags: updatedHashtags,
+          },
+          name: state.settings?.name || '',
+          tagline: state.settings?.branding.tagline || '',
+          logoUrl: state.settings?.branding.logoUrl,
+          address: state.settings?.address,
+          createdAt: state.settings?.createdAt,
+          updatedAt: state.settings?.updatedAt,
+          id: state.settings?.id,
+        }
+      };
+    });
   },
 
   removeHashtag: (index: number) => {
-    const { settings } = get();
-    const hashtagToRemove = settings.hashtags[index];
+    set(state => {
+      const updatedHashtags = (state.settings?.branding?.hashTags || []).filter((_, i) => i !== index);
+      return {
+        settings: {
+          ...state.settings,
+          branding: {
+            ...state.settings?.branding,
+            hashTags: updatedHashtags,
+          },
+          name: state.settings?.name || '',
+          tagline: state.settings?.branding.tagline || '',
+          logoUrl: state.settings?.branding.logoUrl,
+          address: state.settings?.address,
+          createdAt: state.settings?.createdAt,
+          updatedAt: state.settings?.updatedAt,
+          id: state.settings?.id,
+        }
+      };
+    });
+  },
 
-    // Prevent removal of #yensisolutions
-    if (hashtagToRemove === '#yensisolutions') {
-      return;
-    }
-
-    set((state) => ({
-      settings: {
-        ...state.settings,
-        hashtags: state.settings.hashtags.filter((_, i) => i !== index)
+  submitSchoolProfile: async () => {
+    try {
+      set({ isLoading: true, error: null });
+      const { settings } = get();
+      if (!settings) throw new Error('No branding settings available');
+      const payload: SchoolProfileRequest = {
+        name: settings.name,
+        branding: {
+          logoUrl: settings.branding.logoUrl,
+          tagline: settings.branding.tagline,
+        },
+      };
+      const response = await createOrUpdateSchoolProfile(payload);
+      set({ isLoading: false });
+      if (!(response.code === 200 || response.code === 3003)) {
+        set({ error: response.message || 'Failed to submit school profile' });
       }
-    }));
+    } catch (error) {
+      set({
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Failed to submit school profile',
+      });
+    }
   },
 
-  clearError: () => {
-    set({ error: null });
-  },
+  clearError: () => set({ error: null }),
 }));

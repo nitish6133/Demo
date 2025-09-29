@@ -1,14 +1,22 @@
 import { create } from 'zustand';
+import { createSession, stopSession, getSessionStatus, getSessionOutputs } from '../services/sessionService';
 import { Session, CaptureState, UploadProgress } from '../types';
+
 
 interface SessionStore {
   currentSession: Session | null;
   captureState: CaptureState;
   uploadProgress: UploadProgress;
 
-  // Actions
-  startSession: (studentName: string, studentClass: string, studentPhoto?: string | null) => void;
-  stopSession: () => void;
+  startSession: (
+    studentName: string,
+    studentClass: string,
+    profession: string,
+    schoolId: string,
+    studentImageId: string,
+    studentPhoto?: string | null
+  ) => Promise<void>;
+  stopSession: () => Promise<void>;
   takePhoto: () => void;
   startRecording: () => void;
   stopRecording: () => void;
@@ -17,7 +25,9 @@ interface SessionStore {
   setUploadProgress: (progress: number) => void;
   setOutputs: (futureImageUrl?: string, finalVideoUrl?: string) => void;
   resetSession: () => void;
+  pollSessionStatus: (sessionId: string) => Promise<void>;
 }
+
 
 export const useSessionStore = create<SessionStore>((set, get) => ({
   currentSession: null,
@@ -31,61 +41,92 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     isUploading: false,
   },
 
-  startSession: (studentName: string, studentClass: string, studentPhoto?: string | null) => {
-    const session: Session = {
-      id: `session-${Date.now()}`,
-      studentName,
-      studentClass,
-      studentPhoto,
-      profession: '', // Will be set during recording
-      status: 'idle',
-      createdAt: new Date(),
-    };
-    set({ currentSession: session });
+  startSession: async (
+    studentName: string,
+    studentClass: string,
+    profession: string,
+    schoolId: string,
+    studentImageId: string,
+    studentPhoto?: string | null
+  ) => {
+    try {
+      const response = await createSession(studentName, studentClass, profession, schoolId, studentImageId, studentPhoto);
+      if (response.code === 200 && response.result) {
+        const session = response.result;
+        set({
+          currentSession: {
+            ...session,
+            createdAt: new Date(session.createdAt), // Ensure createdAt is a Date object
+          }
+        });
+      } else {
+        console.error('Failed to create session:', response.message);
+      }
+    } catch (error) {
+      console.error('Error creating session:', error);
+    }
   },
 
-  stopSession: () => {
+
+  stopSession: async () => {
     const { currentSession } = get();
-    if (currentSession) {
+    if (!currentSession) return;
+
+    try {
       set({
         currentSession: { ...currentSession, status: 'uploading' },
         uploadProgress: { percentage: 0, isUploading: true }
       });
 
-      // Simulate upload progress
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += Math.random() * 20;
-        if (progress >= 100) {
-          progress = 100;
-          clearInterval(interval);
+      const response = await stopSession(currentSession.id);
+
+      if (response.code === 200) {
+        set({
+          uploadProgress: { percentage: 100, isUploading: false },
+          currentSession: { ...get().currentSession!, status: 'queued' }
+        });
+
+        // Start polling for status updates
+        get().pollSessionStatus(currentSession.id);
+      } else {
+        console.error('Failed to stop session:', response.message);
+      }
+    } catch (error) {
+      console.error('Error stopping session:', error);
+    }
+  },
+
+  pollSessionStatus: async (sessionId: string) => {
+    try {
+      const response = await getSessionStatus(sessionId);
+
+      if (response.code === 200 && response.result) {
+        const { currentSession } = get();
+        if (currentSession) {
           set({
-            uploadProgress: { percentage: 100, isUploading: false },
-            currentSession: { ...get().currentSession!, status: 'queued' }
+            currentSession: { ...currentSession, status: response.result.status }
           });
 
-          // Simulate processing
-          setTimeout(() => {
-            set({
-              currentSession: { ...get().currentSession!, status: 'processing' }
-            });
-          }, 1000);
-
-          // Simulate completion
-          setTimeout(() => {
-            set({
-              currentSession: {
-                ...get().currentSession!,
-                status: 'ready',
-                futureImageUrl: 'https://images.pexels.com/photos/1040881/pexels-photo-1040881.jpeg?auto=compress&cs=tinysrgb&w=800',
-                finalVideoUrl: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4'
-              }
-            });
-          }, 3000);
-        } else {
-          set({ uploadProgress: { percentage: progress, isUploading: true } });
+          // If processing is complete, get outputs
+          if (response.result.status === 'ready') {
+            const outputsResponse = await getSessionOutputs(sessionId);
+            if (outputsResponse.code === 200 && outputsResponse.result) {
+              set({
+                currentSession: {
+                  ...get().currentSession!,
+                  futureImageUrl: outputsResponse.result.futureImageUrl,
+                  finalVideoUrl: outputsResponse.result.finalVideoUrl
+                }
+              });
+            }
+          } else if (response.result.status === 'processing' || response.result.status === 'queued') {
+            // Continue polling
+            setTimeout(() => get().pollSessionStatus(sessionId), 3000);
+          }
         }
-      }, 200);
+      }
+    } catch (error) {
+      console.error('Error polling session status:', error);
     }
   },
 
@@ -100,7 +141,6 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       captureState: { ...get().captureState, isRecording: true, recordingDuration: 0 }
     });
 
-    // Simulate recording timer
     const startTime = Date.now();
     const interval = setInterval(() => {
       const { captureState } = get();
@@ -114,12 +154,10 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       }
     }, 1000);
 
-    // Store interval ID for cleanup
     (get() as any).recordingInterval = interval;
   },
 
   stopRecording: () => {
-    // Clear the recording interval
     const interval = (get() as any).recordingInterval;
     if (interval) {
       clearInterval(interval);
