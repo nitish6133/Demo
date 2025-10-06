@@ -56,7 +56,18 @@ export const useBrandingStore = create<BrandingStore>((set, get) => ({
       const { settings } = get();
       if (!settings) throw new Error('No branding settings available');
       if (!settings.id) throw new Error('Branding settings id is missing');
-      const response = await updateBrandingSettings(settings.id, settings);
+
+      const updatePayload = {
+        name: settings.name,
+        branding: settings.branding,
+        id: settings.id,
+        address: settings.address,
+        createdAt: settings.createdAt,
+        updatedAt: settings.updatedAt,
+      };
+
+      const response = await updateBrandingSettings(settings.id, updatePayload);
+
       if (response.code === 200 && response.result) {
         set({ settings: response.result, isLoading: false });
       } else {
@@ -69,7 +80,7 @@ export const useBrandingStore = create<BrandingStore>((set, get) => ({
 
   uploadimage: async (file: File) => {
     try {
-      set({ isLoading: true, error: null });
+      // Remove set({ isLoading: true, ... })
       const response = await uploadLogo(file);
 
       if ((response.code === 200 || response.code === 3003) && response.result) {
@@ -84,21 +95,20 @@ export const useBrandingStore = create<BrandingStore>((set, get) => ({
 
           const updatedSettings: BrandingSettings = {
             ...state.settings,
-            name: state.settings?.name ?? "",  // Required string, fallback to empty string if undefined
+            name: state.settings?.name ?? "",
             branding: updatedBranding,
           };
 
-          console.log("updatedSettings", updatedSettings);
-
-          return { settings: updatedSettings, isLoading: false };
+          return { settings: updatedSettings };
         });
       } else {
-        set({ error: response.message || 'Failed to upload logo', isLoading: false });
+        set({ error: response.message || 'Failed to upload logo' });
       }
     } catch (error) {
-      set({ error: error instanceof Error ? error.message : 'Failed to upload logo', isLoading: false });
+      set({ error: error instanceof Error ? error.message : 'Failed to upload logo' });
     }
   },
+
 
 
   updateSettings: (updates: Partial<BrandingSettings>) => {
@@ -158,6 +168,7 @@ export const useBrandingStore = create<BrandingStore>((set, get) => ({
       set({ isLoading: true, error: null });
       const { settings } = get();
       if (!settings) throw new Error('No branding settings available');
+
       const payload: SchoolProfileRequest = {
         name: settings.name,
         branding: {
@@ -165,6 +176,8 @@ export const useBrandingStore = create<BrandingStore>((set, get) => ({
           tagline: settings.branding.tagline,
         },
       };
+
+      console.log('Submitting school profile payload:', payload);
       const response = await createOrUpdateSchoolProfile(payload);
       set({ isLoading: false });
       if (!(response.code === 200 || response.code === 3003)) {

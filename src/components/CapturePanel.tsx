@@ -3,6 +3,7 @@ import { Camera, Video, RotateCcw } from 'lucide-react';
 import { useSessionStore } from '../stores/useSessionStore';
 import { useBrandingStore } from '../stores/useBrandingStore';
 import { formatDuration } from '../utils/validators';
+import { getLogoUrl } from '../utils/imageUtils';
 
 const professions = [
   'Astronaut', 'Doctor', 'Pilot', 'Scientist', 'Engineer', 'Teacher',
@@ -146,6 +147,8 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
     }
   };
 
+  const logoDisplayUrl = getLogoUrl(settings?.branding?.logoUrl ?? undefined);
+
   return (
     <div className="h-full flex flex-col min-h-0">
       {/* Instagram Reels Style Split View */}
@@ -168,16 +171,16 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
           {/* School Branding Header */}
           <div className="absolute top-2 left-2 right-2 z-10">
             <div className="flex items-center text-white">
-              {settings.logoUrl ? (
+              {settings?.branding.logoUrl ? (
                 <img
-                  src={settings.logoUrl}
+                  src={logoDisplayUrl}
                   alt="School logo"
                   className="w-6 h-6 object-contain bg-white/20 backdrop-blur-sm rounded-full p-1 mr-2"
                 />
               ) : (
                 <div className="w-6 h-6 bg-white/20 backdrop-blur-sm rounded-full p-1 mr-2"></div>
               )}
-              <span className="text-sm font-medium">{settings.schoolName}</span>
+              <span className="text-sm font-medium">{settings?.name}</span>
             </div>
           </div>
 

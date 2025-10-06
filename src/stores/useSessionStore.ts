@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createSession, stopSession, getSessionStatus, getSessionOutputs } from '../services/sessionService';
 import { Session, CaptureState, UploadProgress } from '../types';
-
+import { useBrandingStore } from './useBrandingStore';
 
 interface SessionStore {
   currentSession: Session | null;
@@ -12,7 +12,6 @@ interface SessionStore {
     studentName: string,
     studentClass: string,
     profession: string,
-    schoolId: string,
     studentImageId: string,
     studentPhoto?: string | null
   ) => Promise<void>;
@@ -45,19 +44,35 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     studentName: string,
     studentClass: string,
     profession: string,
-    schoolId: string,
     studentImageId: string,
     studentPhoto?: string | null
   ) => {
     try {
-      const response = await createSession(studentName, studentClass, profession, schoolId, studentImageId, studentPhoto);
+      // ✅ Get schoolId from branding store
+      const schoolId = useBrandingStore.getState().settings?.id;
+
+      if (!schoolId) {
+        console.error('School ID is missing from branding settings');
+        return;
+      }
+
+      // ✅ Send the branding store schoolId to createSession
+      const response = await createSession(
+        studentName,
+        studentClass,
+        profession,
+        schoolId,
+        studentImageId,
+        studentPhoto
+      );
+
       if (response.code === 200 && response.result) {
         const session = response.result;
         set({
           currentSession: {
             ...session,
-            createdAt: new Date(session.createdAt), // Ensure createdAt is a Date object
-          }
+            createdAt: new Date(session.createdAt),
+          },
         });
       } else {
         console.error('Failed to create session:', response.message);
