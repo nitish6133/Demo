@@ -9,7 +9,8 @@ interface BrandingStore {
 
   loadSettings: () => Promise<void>;
   saveSettings: () => Promise<void>;
-  uploadimage: (file: File) => Promise<void>;
+  uploadImage: (file: File) => Promise<void>;
+  uploadStudentImage: (file: File) => Promise<{ code: number; result?: string; message?: string }>;
   updateSettings: (settings: Partial<BrandingSettings>) => void;
   addHashtag: (hashtag: string) => void;
   removeHashtag: (index: number) => void;
@@ -78,7 +79,7 @@ export const useBrandingStore = create<BrandingStore>((set, get) => ({
     }
   },
 
-  uploadimage: async (file: File) => {
+  uploadImage: async (file: File) => {
     try {
       // Remove set({ isLoading: true, ... })
       const response = await uploadLogo(file);
@@ -108,6 +109,18 @@ export const useBrandingStore = create<BrandingStore>((set, get) => ({
       set({ error: error instanceof Error ? error.message : 'Failed to upload logo' });
     }
   },
+
+  uploadStudentImage: async (file: File) => {
+  const response = await uploadLogo(file); // ApiResponse<{ logoUrl: string }>
+  
+  return {
+    code: response.code,
+    message: response.message,
+    result: response.result?.logoUrl ?? undefined, // convert {logoUrl} to string
+  };
+},
+
+
 
 
 

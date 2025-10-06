@@ -10,7 +10,7 @@ const BrandingSetup: React.FC = () => {
   const {
     settings,
     updateSettings,
-    uploadimage,
+    uploadImage,
     isLoading,
     loadSettings,
     submitSchoolProfile,
@@ -73,7 +73,7 @@ const BrandingSetup: React.FC = () => {
       const previewUrl = URL.createObjectURL(file);
       setLogoPreviewUrl(previewUrl);
       try {
-        await uploadimage(file);
+        await uploadImage(file);
       } catch (error) {
         console.error('Failed to upload logo:', error);
         // Revoke preview URL and clear

@@ -13,7 +13,7 @@ const BrandingSettings: React.FC = () => {
     error,
     loadSettings,
     saveSettings,
-    uploadimage,
+    uploadImage,
     updateSettings,
     addHashtag,
     removeHashtag,
@@ -60,7 +60,7 @@ const BrandingSettings: React.FC = () => {
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      await uploadimage(file);
+      await uploadImage(file);
       setHasUnsavedChanges(false);
     }
   };

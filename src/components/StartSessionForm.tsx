@@ -1,5 +1,6 @@
+//StartSessionForm.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { User, GraduationCap, Camera, RotateCcw, Check, X } from 'lucide-react';
+import { User, GraduationCap, Camera, Check, X } from 'lucide-react';
 import { useSessionStore } from '../stores/useSessionStore';
 import { useBrandingStore } from '../stores/useBrandingStore';
 import { validateStudentName, validateStudentClass } from '../utils/validators';
@@ -28,17 +29,11 @@ const StartSessionForm: React.FC<StartSessionFormProps> = ({ onSessionStart }) =
 
   const startSession = useSessionStore((state) => state.startSession);
   const loadBrandingSettings = useBrandingStore((state) => state.loadSettings);
+  // const uploadImage = useBrandingStore((state) => state.uploadImage); // Reuse store function logoUrl
+  const { uploadStudentImage } = useBrandingStore()
 
-  // ✅ Load branding settings on mount to get schoolId
   useEffect(() => {
-    const load = async () => {
-      try {
-        await loadBrandingSettings();
-      } catch (err) {
-        console.error('Failed to load branding settings:', err);
-      }
-    };
-    load();
+    loadBrandingSettings().catch(console.error);
   }, [loadBrandingSettings]);
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -48,10 +43,7 @@ const StartSessionForm: React.FC<StartSessionFormProps> = ({ onSessionStart }) =
     const classError = validateStudentClass(studentClass);
 
     if (nameError || classError) {
-      setErrors({
-        studentName: nameError || undefined,
-        studentClass: classError || undefined,
-      });
+      setErrors({ studentName: nameError || undefined, studentClass: classError || undefined });
       return;
     }
 
@@ -61,36 +53,15 @@ const StartSessionForm: React.FC<StartSessionFormProps> = ({ onSessionStart }) =
   };
 
   const startCamera = async () => {
-  try {
-    // Try default user-facing camera
-    let stream: MediaStream | null = null;
-
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+      streamRef.current = stream;
+      if (videoRef.current) videoRef.current.srcObject = stream;
     } catch (err) {
-      console.warn('User-facing camera not found, trying any camera...', err);
-      // fallback: try any available camera
-      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-    }
-
-    streamRef.current = stream;
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream;
-    }
-  } catch (error: any) {
-    console.error('Error accessing camera:', error);
-
-    // ✅ Only alert if really no camera exists
-    if (error.name === 'NotAllowedError') {
-      alert('Camera permission denied. Please allow camera access.');
-    } else if (error.name === 'NotFoundError') {
-      alert('No camera found on this device.');
-    } else {
+      console.error('Error accessing camera:', err);
       alert('Cannot access camera. Please check your device or browser.');
     }
-  }
-};
-
+  };
 
   const stopCamera = () => {
     if (streamRef.current) {
@@ -104,10 +75,8 @@ const StartSessionForm: React.FC<StartSessionFormProps> = ({ onSessionStart }) =
       const canvas = canvasRef.current;
       const video = videoRef.current;
       const context = canvas.getContext('2d');
-
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-
       if (context) {
         context.drawImage(video, 0, 0);
         const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
@@ -125,146 +94,128 @@ const StartSessionForm: React.FC<StartSessionFormProps> = ({ onSessionStart }) =
   };
 
   const handleConfirmPhoto = async () => {
-    setIsUploading(true);
+  if (!capturedPhoto) return;
 
-    try {
-      // ✅ Wait for a short delay to simulate upload
-      await new Promise(resolve => setTimeout(resolve, 1500));
+  setIsUploading(true);
+  try {
+    // Convert base64 to File
+    const blob = await (await fetch(capturedPhoto)).blob();
+    const file = new File([blob], 'student-photo.jpg', { type: 'image/jpeg' });
 
-      // ✅ Start session with branding schoolId already loaded
-      await startSession(
-        studentName.trim(),
-        studentClass,
-        "Student",
-        "", // studentImageId
-        capturedPhoto ?? null
-      );
+    // Upload via branding store
+    const uploadResponse = await uploadStudentImage(file);
+    console.log("uploadResponse", uploadResponse);
 
-      onSessionStart();
-    } catch (error) {
-      console.error('Error starting session:', error);
-    } finally {
-      setIsUploading(false);
-    }
-  };
+    const studentImageId = uploadResponse.result; // ✅ string | undefined
+
+    if (!studentImageId) throw new Error("Failed to upload student image");
+
+    // Start session with uploaded image
+    await startSession(studentName.trim(), studentClass, "Student", studentImageId);
+
+    onSessionStart();
+  } catch (error) {
+    console.error('Error uploading photo or starting session:', error);
+  } finally {
+    setIsUploading(false);
+  }
+};
 
   const handleBack = () => {
-    if (step === 'photo') {
-      stopCamera();
-      setStep('form');
-    } else if (step === 'confirm') {
-      setCapturedPhoto(null);
-      setStep('photo');
-      startCamera();
-    }
+    stopCamera();
+    setStep('form');
   };
 
-  // Form Step
-  if (step === 'form') {
-    return (
-      <form onSubmit={handleFormSubmit} className="space-y-6">
-        <div>
-          <label htmlFor="studentName" className="block text-sm font-medium text-gray-700 mb-2">
-            <User className="inline w-4 h-4 mr-1" />
-            Student Name
-          </label>
-          <input
-            type="text"
-            id="studentName"
-            value={studentName}
-            onChange={(e) => setStudentName(e.target.value)}
-            className={`w-full px-4 py-3 rounded-lg border text-lg ${errors.studentName ? 'border-red-500' : 'border-gray-300'} focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-            placeholder="Enter student name"
-          />
-          {errors.studentName && <p className="mt-1 text-sm text-red-600">{errors.studentName}</p>}
-        </div>
+  // --- Render ---
+  if (step === 'form') return (
+    <form onSubmit={handleFormSubmit} className="space-y-6">
+      <div>
+        <label htmlFor="studentName" className="block text-sm font-medium text-gray-700 mb-2">
+          <User className="inline w-4 h-4 mr-1" /> Student Name
+        </label>
+        <input
+          type="text"
+          id="studentName"
+          value={studentName}
+          onChange={(e) => setStudentName(e.target.value)}
+          className={`w-full px-4 py-3 rounded-lg border text-lg ${errors.studentName ? 'border-red-500' : 'border-gray-300'}`}
+          placeholder="Enter student name"
+        />
+        {errors.studentName && <p className="mt-1 text-sm text-red-600">{errors.studentName}</p>}
+      </div>
 
-        <div>
-          <label htmlFor="studentClass" className="block text-sm font-medium text-gray-700 mb-2">
-            <GraduationCap className="inline w-4 h-4 mr-1" />
-            Class/Grade
-          </label>
-          <select
-            id="studentClass"
-            value={studentClass}
-            onChange={(e) => setStudentClass(e.target.value)}
-            className={`w-full px-4 py-3 rounded-lg border text-lg ${errors.studentClass ? 'border-red-500' : 'border-gray-300'} focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-          >
-            <option value="">Select class/grade</option>
-            {classes.map((cls) => <option key={cls} value={cls}>{cls}</option>)}
-          </select>
-          {errors.studentClass && <p className="mt-1 text-sm text-red-600">{errors.studentClass}</p>}
-        </div>
-
-        <button
-          type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-lg transition duration-200 flex items-center justify-center text-lg"
+      <div>
+        <label htmlFor="studentClass" className="block text-sm font-medium text-gray-700 mb-2">
+          <GraduationCap className="inline w-4 h-4 mr-1" /> Class/Grade
+        </label>
+        <select
+          id="studentClass"
+          value={studentClass}
+          onChange={(e) => setStudentClass(e.target.value)}
+          className={`w-full px-4 py-3 rounded-lg border text-lg ${errors.studentClass ? 'border-red-500' : 'border-gray-300'}`}
         >
-          <Camera className="w-5 h-5 mr-2" />
-          Take Student Photo
+          <option value="">Select class/grade</option>
+          {classes.map((cls) => <option key={cls} value={cls}>{cls}</option>)}
+        </select>
+        {errors.studentClass && <p className="mt-1 text-sm text-red-600">{errors.studentClass}</p>}
+      </div>
+
+      <button
+        type="submit"
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-lg flex items-center justify-center text-lg"
+      >
+        <Camera className="w-5 h-5 mr-2" /> Take Student Photo
+      </button>
+    </form>
+  );
+
+  if (step === 'photo') return (
+    <div className="space-y-4">
+      <div className="text-center mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Take Student Photo</h3>
+        <p className="text-sm text-gray-600">Position {studentName} in the camera frame</p>
+      </div>
+
+      <div className="relative">
+        <video ref={videoRef} autoPlay playsInline muted className="w-full h-64 object-cover rounded-lg bg-gray-900" />
+        <canvas ref={canvasRef} className="hidden" />
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="w-48 h-48 border-2 border-white border-dashed rounded-full opacity-50"></div>
+        </div>
+      </div>
+
+      <div className="flex gap-3">
+        <button onClick={handleBack} className="flex-1 px-4 py-3 border border-gray-300 hover:border-gray-400 text-gray-700 rounded-lg flex items-center justify-center">
+          <X className="w-4 h-4 mr-2" /> Cancel
         </button>
-      </form>
-    );
-  }
-
-  // Photo Capture Step
-  if (step === 'photo') {
-    return (
-      <div className="space-y-4">
-        <div className="text-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Take Student Photo</h3>
-          <p className="text-sm text-gray-600">Position {studentName} in the camera frame</p>
-        </div>
-
-        <div className="relative">
-          <video ref={videoRef} autoPlay playsInline muted className="w-full h-64 object-cover rounded-lg bg-gray-900" />
-          <canvas ref={canvasRef} className="hidden" />
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-48 h-48 border-2 border-white border-dashed rounded-full opacity-50"></div>
-          </div>
-        </div>
-
-        <div className="flex gap-3">
-          <button onClick={handleBack} className="flex-1 px-4 py-3 border border-gray-300 hover:border-gray-400 text-gray-700 font-medium rounded-lg transition duration-200 flex items-center justify-center">
-            <X className="w-4 h-4 mr-2" /> Cancel
-          </button>
-          <button onClick={capturePhoto} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center">
-            <Camera className="w-4 h-4 mr-2" /> Capture
-          </button>
-        </div>
+        <button onClick={capturePhoto} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center">
+          <Camera className="w-4 h-4 mr-2" /> Capture
+        </button>
       </div>
-    );
-  }
+    </div>
+  );
 
-  // Confirm Photo Step
-  if (step === 'confirm') {
-    return (
-      <div className="space-y-4">
-        <div className="text-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Confirm Student Photo</h3>
-          <p className="text-sm text-gray-600">{studentName} - {studentClass}</p>
-        </div>
-
-        {capturedPhoto && <div className="relative">
-          <img src={capturedPhoto} alt="Captured student photo" className="w-full h-64 object-cover rounded-lg" />
-        </div>}
-
-        <div className="flex gap-3">
-          <button onClick={retakePhoto} disabled={isUploading} className="flex-1 px-4 py-3 border border-gray-300 hover:border-gray-400 disabled:opacity-50 text-gray-700 font-medium rounded-lg transition duration-200 flex items-center justify-center">
-            <RotateCcw className="w-4 h-4 mr-2" /> Retake
-          </button>
-          <button onClick={handleConfirmPhoto} disabled={isUploading} className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center">
-            {isUploading ? <>
-              <div className="w-4 h-4 border-2 border-white border-l-transparent rounded-full animate-spin mr-2"></div>
-              Uploading...
-            </> : <>
-              <Check className="w-4 h-4 mr-2" /> Confirm & Start
-            </>}
-          </button>
-        </div>
+  if (step === 'confirm') return (
+    <div className="space-y-4">
+      <div className="text-center mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Confirm Student Photo</h3>
+        <p className="text-sm text-gray-600">{studentName} - {studentClass}</p>
       </div>
-    );
-  }
+
+      {capturedPhoto && <img src={capturedPhoto} alt="Captured student photo" className="w-full h-64 object-cover rounded-lg" />}
+
+      <div className="flex gap-3">
+        <button onClick={retakePhoto} disabled={isUploading} className="flex-1 px-4 py-3 border border-gray-300 disabled:opacity-50 text-gray-700 rounded-lg flex items-center justify-center">
+          <Camera className="w-4 h-4 mr-2" /> Retake
+        </button>
+        <button onClick={handleConfirmPhoto} disabled={isUploading} className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center">
+          {isUploading ? <>
+            <div className="w-4 h-4 border-2 border-white border-l-transparent rounded-full animate-spin mr-2"></div> Uploading...
+          </> : <><Check className="w-4 h-4 mr-2" /> Confirm & Start</>}
+        </button>
+      </div>
+    </div>
+  );
 
   return null;
 };
