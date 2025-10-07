@@ -105,7 +105,7 @@ export const startFinalVideo = async (
 
 export const getAllSessions = async (schoolId: string): Promise<ApiResponse<Session[]>> => {
   try {
-    const response = await apiClient.get(`/sessions/latest?schoolId=${schoolId}`);
+    const response = await apiClient.get(`/sessions?schoolId=${schoolId}`);
     return response.data;
   } catch (error: any) {
     return {

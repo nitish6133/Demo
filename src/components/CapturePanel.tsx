@@ -4,7 +4,7 @@ import { useSessionStore } from '../stores/useSessionStore';
 import { useBrandingStore } from '../stores/useBrandingStore';
 import { formatDuration } from '../utils/validators';
 import { getLogoUrl } from '../utils/imageUtils';
-import { imageBaseUrl } from '../constants/appConstants';
+import { generatedImageBaseUrl } from '../constants/appConstants';
 
 const professions = [
   'Astronaut', 'Doctor', 'Pilot', 'Scientist', 'Engineer', 'Teacher',
@@ -26,7 +26,8 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
     pendingSessionData,
     startSession,
     stopRecording,
-    stopSession: stopSessionFromStore
+    stopSession: stopSessionFromStore,
+    uploadVideo
   } = useSessionStore();
 
   console.log("currentSession", currentSession)
@@ -40,6 +41,8 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
 
   const handleProfessionSelect = (profession: string) => {
     setSelectedProfession(profession);
@@ -132,42 +135,75 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
 
   const handleRecordingControl = () => {
     if (recordingStep === 'ready') {
-      // Start recording
+      if (stream) {
+        setRecordedChunks([]);
+        try {
+          const recorder = new MediaRecorder(stream, {
+            mimeType: 'video/webm;codecs=vp8'
+          });
+
+          recorder.ondataavailable = (event) => {
+            if (event.data && event.data.size > 0) {
+              setRecordedChunks(prev => [...prev, event.data]);
+            }
+          };
+
+          setMediaRecorder(recorder);
+          recorder.start(1000);
+        } catch (err) {
+          console.error('Failed to start MediaRecorder:', err);
+        }
+      }
+
       startRecording();
       setRecordingStep('recording');
 
-      // Show profession selection after starting recording
       setTimeout(() => {
         setRecordingStep('selecting');
       }, 1000);
     } else if (captureState.isRecording) {
-      // Pause recording
       pauseRecording();
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.pause();
+      }
+    } else if (!captureState.isRecording && mediaRecorder && mediaRecorder.state === 'paused') {
+      startRecording();
+      mediaRecorder.resume();
     }
   };
 
-  // MODIFIED: Stop recording and trigger the store's stopSession which handles UI flow
   const handleStopRecording = async () => {
-    
-      await stopSessionFromStore();
     if (captureState.isRecording) {
       pauseRecording();
     }
 
-    // Stop the recording timer
     stopRecording();
+
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+      await new Promise(resolve => {
+        if (mediaRecorder) {
+          mediaRecorder.onstop = () => resolve(undefined);
+        }
+      });
+    }
 
     setIsStoppingRecording(true);
     setStopError(null);
 
     try {
-      // Call the store's stopSession which handles:
-      // 1. Upload progress UI
-      // 2. Calling stopSession API
-      // 3. Calling startFinalVideo API
-      // 4. Starting status polling
+      if (recordedChunks.length > 0) {
+        const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
+        const videoUrl = await uploadVideo(videoBlob);
 
-      // After successful stop, trigger the completion callback
+        if (videoUrl) {
+          console.log('✅ Video uploaded successfully:', videoUrl);
+        } else {
+          console.warn('⚠️ Video upload returned null');
+        }
+      }
+
+      await stopSessionFromStore();
       handleStopSession();
     } catch (error) {
       setStopError(error instanceof Error ? error.message : 'An unexpected error occurred');
@@ -268,7 +304,7 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
           {showAIImage ? (
             <div className="relative w-full h-full">
               <img
-                src={`${imageBaseUrl}${currentSession?.futureImageId || currentSession?.studentImageId || pendingSessionData?.studentImageId}`}
+                src={`${generatedImageBaseUrl}${currentSession?.futureImageId || currentSession?.studentImageId || pendingSessionData?.studentImageId}`}
                 alt="Future self"
                 className="w-full h-full object-cover"
                 onError={(e) => {

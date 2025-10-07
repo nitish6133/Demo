@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createSession, getSessionStatus, getSessionOutputs, startFinalVideo, getAllSessions } from '../services/sessionService';
 import { Session, CaptureState, UploadProgress } from '../types';
 import { useBrandingStore } from './useBrandingStore';
-import { serviceBaseUrl } from '../constants/appConstants';
+import { uploadFile } from '../services/brandingService';
 
 interface SessionStore {
   currentSession: Session | null;
@@ -28,6 +28,7 @@ interface SessionStore {
     studentPhoto?: string | null
   ) => Promise<void>;
   stopSession: () => Promise<void>;
+  uploadVideo: (videoBlob: Blob) => Promise<string | null>;
 
   setPendingSessionData: (studentName: string, studentClass: string, studentImageId: string) => void;
   setStudentImage: (imageId: string) => void;
@@ -86,6 +87,36 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     }
   },
 
+  uploadVideo: async (videoBlob: Blob) => {
+    try {
+      const videoFile = new File([videoBlob], 'recording.mp4', { type: 'video/mp4' });
+      const response = await uploadFile(videoFile);
+      console.log("response", response)
+
+      if (response.code === 3003 && response.result) {
+        const videoUrl = response.result;
+
+        const { currentSession } = get();
+        if (currentSession) {
+          set({
+            currentSession: {
+              ...currentSession,
+              videoId: videoUrl
+            }
+          });
+        }
+
+        return videoUrl;
+      } else {
+        console.error('Failed to upload video:', response.message);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error uploading video:', error);
+      return null;
+    }
+  },
+
   stopSession: async () => {
     const { currentSession } = get();
     if (!currentSession) return;
@@ -117,7 +148,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       }
 
       const futureImageUrl = currentSession.futureImageId || currentSession.studentImageId
-      const teacherVideoUrl = currentSession.id
+      const teacherVideoUrl = currentSession.videoId || '';
 
       const finalVideoResponse = await startFinalVideo(
         currentSession.id,

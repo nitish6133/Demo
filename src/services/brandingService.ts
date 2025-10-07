@@ -53,30 +53,28 @@ export const updateBrandingSettings = async (
 };
 
 
-export const uploadFile = async (
+export const uploadFile = async <T = string>(
   file: File
-): Promise<ApiResponse<{ logoUrl: string }>> => {
+): Promise<ApiResponse<T>> => {
   try {
     const formData = new FormData();
-    formData.append('file', file); // ✅ backend expects "file"
+    formData.append('file', file);
 
     const response = await apiClient.post('/upload-file', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
 
-    // ✅ Normalize result to match your expected return type
     return {
       code: response.data.code,
       message: response.data.message,
-      result: { logoUrl: response.data.result }
+      result: response.data.result as T,
     };
   } catch (error: any) {
     return {
-      result: null,
+      result: null as T | null,
       code: error.response?.status || 500,
-      message: error.response?.data?.message || 'Failed to upload logo'
+      message: error.response?.data?.message || 'Failed to upload file',
     };
   }
 };
+

@@ -80,45 +80,46 @@ export const useBrandingStore = create<BrandingStore>((set, get) => ({
   },
 
   uploadImage: async (file: File) => {
-    try {
-      // Remove set({ isLoading: true, ... })
-      const response = await uploadFile(file);
+  try {
+    const response = await uploadFile<string>(file); // result is string
 
-      if ((response.code === 200 || response.code === 3003) && response.result) {
-        const logoUrl = response.result.logoUrl;
+    if ((response.code === 200 || response.code === 3003) && response.result) {
+      const logoUrl = response.result; // ✅ directly use string
 
-        set(state => {
-          const updatedBranding: Branding = {
-            logoUrl: logoUrl || null,
-            tagline: state.settings?.branding?.tagline ?? "",
-            hashTags: state.settings?.branding?.hashTags || null,
-          };
+      set(state => {
+        const updatedBranding: Branding = {
+          logoUrl: logoUrl || null,
+          tagline: state.settings?.branding?.tagline ?? "",
+          hashTags: state.settings?.branding?.hashTags || null,
+        };
 
-          const updatedSettings: BrandingSettings = {
-            ...state.settings,
-            name: state.settings?.name ?? "",
-            branding: updatedBranding,
-          };
+        const updatedSettings: BrandingSettings = {
+          ...state.settings,
+          name: state.settings?.name ?? "",
+          branding: updatedBranding,
+        };
 
-          return { settings: updatedSettings };
-        });
-      } else {
-        set({ error: response.message || 'Failed to upload logo' });
-      }
-    } catch (error) {
-      set({ error: error instanceof Error ? error.message : 'Failed to upload logo' });
+        return { settings: updatedSettings };
+      });
+    } else {
+      set({ error: response.message || 'Failed to upload logo' });
     }
-  },
+  } catch (error) {
+    set({ error: error instanceof Error ? error.message : 'Failed to upload logo' });
+  }
+},
+
 
   uploadStudentImage: async (file: File) => {
-    const response = await uploadFile(file); // ApiResponse<{ logoUrl: string }>
+  const response = await uploadFile<string>(file); // result is string
 
-    return {
-      code: response.code,
-      message: response.message,
-      result: response.result?.logoUrl ?? undefined, // convert {logoUrl} to string
-    };
-  },
+  return {
+    code: response.code,
+    message: response.message,
+    result: response.result ?? undefined, // ✅ no .logoUrl
+  };
+},
+
 
   updateSettings: (updates: Partial<BrandingSettings>) => {
     set(state => ({

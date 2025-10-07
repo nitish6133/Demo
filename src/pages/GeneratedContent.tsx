@@ -4,7 +4,7 @@ import { ArrowLeft, Image, Video, Share2, Download, Calendar, User, GraduationCa
 import Footer from '../components/Footer';
 import { useBrandingStore } from '../stores/useBrandingStore';
 import { useSessionStore } from '../stores/useSessionStore';
-import { imageBaseUrl, videoBaseUrl } from '../constants/appConstants';
+import { generatedImageBaseUrl, videoBaseUrl } from '../constants/appConstants';
 import { GeneratedItem } from '../types/generatedItemTypes';
 
 const GeneratedContent: React.FC = () => {
@@ -26,8 +26,8 @@ const GeneratedContent: React.FC = () => {
       studentClass: session.studentClass,
       profession: session.profession,
       futureImageUrl: session.futureImageId
-        ? `${imageBaseUrl}${session.futureImageId}`
-        : `${imageBaseUrl}${session.studentImageId}`,
+        ? `${generatedImageBaseUrl}${session.futureImageId}`
+        : `${generatedImageBaseUrl}${session.studentImageId}`,
       finalVideoUrl: session.videoId ? `${videoBaseUrl}${session.videoId}` : undefined,
       createdAt: new Date(session.createdAt),
       isPosted: session.status === 'published',
