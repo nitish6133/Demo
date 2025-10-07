@@ -11,6 +11,7 @@ const GeneratedContent: React.FC = () => {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isPosting, setIsPosting] = useState(false);
   const [filter, setFilter] = useState<'all' | 'posted' | 'unposted'>('all');
+  const [viewingItem, setViewingItem] = useState<GeneratedItem | null>(null);
 
   // Use store for state management
   const { allSessions, isLoadingSessions, loadAllSessions } = useSessionStore();
@@ -28,7 +29,7 @@ const GeneratedContent: React.FC = () => {
       futureImageUrl: session.futureImageId
         ? `${generatedImageBaseUrl}${session.futureImageId}`
         : `${generatedImageBaseUrl}${session.studentImageId}`,
-      finalVideoUrl: session.videoId ? `${videoBaseUrl}${session.videoId}` : undefined,
+      finalVideoUrl: session.outputs?.videoUrl ? `${videoBaseUrl}${session.outputs.videoUrl}` : undefined,
       createdAt: new Date(session.createdAt),
       isPosted: session.status === 'published',
     }));
@@ -277,6 +278,15 @@ const GeneratedContent: React.FC = () => {
 
                 {/* Action Buttons */}
                 <div className="px-4 pb-4 flex space-x-2">
+                  {item.finalVideoUrl && (
+                    <button
+                      onClick={() => setViewingItem(item)}
+                      className="flex-1 flex items-center justify-center px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition duration-200 text-sm"
+                    >
+                      <Video className="w-4 h-4 mr-1" />
+                      View
+                    </button>
+                  )}
                   <button className="flex-1 flex items-center justify-center px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition duration-200 text-sm">
                     <Download className="w-4 h-4 mr-1" />
                     Download
@@ -299,6 +309,74 @@ const GeneratedContent: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* Video Modal */}
+      {viewingItem && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">{viewingItem.studentName}</h2>
+                <p className="text-sm text-gray-600">
+                  {viewingItem.studentClass} - Future {viewingItem.profession}
+                </p>
+              </div>
+              <button
+                onClick={() => setViewingItem(null)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition duration-200"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-4">
+              {/* Image */}
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Generated Image</h3>
+                <img
+                  src={viewingItem.futureImageUrl}
+                  alt={`Future ${viewingItem.profession}`}
+                  className="w-full rounded-lg"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS4zYIcFuWWsfSvBJdujgD_4dq6Sg6cPUHi3tVx3C9Vp1inuOLdpurfXeY&s';
+                  }}
+                />
+              </div>
+
+              {/* Video */}
+              {viewingItem.finalVideoUrl && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Generated Video</h3>
+                  <video
+                    src={viewingItem.finalVideoUrl}
+                    controls
+                    className="w-full rounded-lg"
+                    controlsList="nodownload"
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end space-x-2 p-4 border-t">
+              <button
+                onClick={() => setViewingItem(null)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition duration-200"
+              >
+                Close
+              </button>
+              <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition duration-200 flex items-center">
+                <Download className="w-4 h-4 mr-2" />
+                Download All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>
