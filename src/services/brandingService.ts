@@ -53,7 +53,7 @@ export const updateBrandingSettings = async (
 };
 
 
-export const uploadLogo = async (
+export const uploadFile = async (
   file: File
 ): Promise<ApiResponse<{ logoUrl: string }>> => {
   try {

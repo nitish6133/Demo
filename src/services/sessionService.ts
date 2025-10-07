@@ -27,19 +27,6 @@ export const createSession = async (
   }
 };
 
-export const stopSession = async (sessionId: string): Promise<ApiResponse<null>> => {
-  try {
-    const response = await apiClient.post(`/sessions/${sessionId}/stop`);
-    return response.data;
-  } catch (error: any) {
-    return {
-      result: null,  // ✅ Add this
-      code: error.response?.status || 500,
-      message: error.response?.data?.message || 'Failed to stop session'
-    };
-  }
-};
-
 export const getSessionStatus = async (
   sessionId: string
 ): Promise<ApiResponse<{ status: Session['status'] }>> => {

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { createOrUpdateSchoolProfile, getBrandingSettings, updateBrandingSettings, uploadLogo } from '../services/brandingService';
+import { createOrUpdateSchoolProfile, getBrandingSettings, updateBrandingSettings, uploadFile } from '../services/brandingService';
 import { Branding, BrandingSettings, SchoolProfileRequest } from '../types/branding';
 
 interface BrandingStore {
@@ -82,7 +82,7 @@ export const useBrandingStore = create<BrandingStore>((set, get) => ({
   uploadImage: async (file: File) => {
     try {
       // Remove set({ isLoading: true, ... })
-      const response = await uploadLogo(file);
+      const response = await uploadFile(file);
 
       if ((response.code === 200 || response.code === 3003) && response.result) {
         const logoUrl = response.result.logoUrl;
@@ -111,7 +111,7 @@ export const useBrandingStore = create<BrandingStore>((set, get) => ({
   },
 
   uploadStudentImage: async (file: File) => {
-    const response = await uploadLogo(file); // ApiResponse<{ logoUrl: string }>
+    const response = await uploadFile(file); // ApiResponse<{ logoUrl: string }>
 
     return {
       code: response.code,

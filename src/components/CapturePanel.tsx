@@ -148,6 +148,8 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
 
   // MODIFIED: Stop recording and trigger the store's stopSession which handles UI flow
   const handleStopRecording = async () => {
+    
+      await stopSessionFromStore();
     if (captureState.isRecording) {
       pauseRecording();
     }
@@ -164,7 +166,6 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
       // 2. Calling stopSession API
       // 3. Calling startFinalVideo API
       // 4. Starting status polling
-      await stopSessionFromStore();
 
       // After successful stop, trigger the completion callback
       handleStopSession();
@@ -267,9 +268,7 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
           {showAIImage ? (
             <div className="relative w-full h-full">
               <img
-                src={currentSession?.futureImageId
-                  ? `${imageBaseUrl}${currentSession.futureImageId}`
-                  : `${imageBaseUrl}${currentSession?.studentImageId || pendingSessionData?.studentImageId}`}
+                src={`${imageBaseUrl}${currentSession?.futureImageId || currentSession?.studentImageId || pendingSessionData?.studentImageId}`}
                 alt="Future self"
                 className="w-full h-full object-cover"
                 onError={(e) => {

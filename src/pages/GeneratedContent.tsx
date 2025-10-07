@@ -14,39 +14,38 @@ const GeneratedContent: React.FC = () => {
 
   // Use store for state management
   const { allSessions, isLoadingSessions, loadAllSessions } = useSessionStore();
-  console.log("allSessions", allSessions)
-  const { settings } = useBrandingStore();
+  const { settings, isLoading: isLoadingSettings, loadSettings } = useBrandingStore();
+
 
   // Map sessions to UI format
   const items: GeneratedItem[] = allSessions
-  .filter(session => ['ready', 'published', 'active'].includes(session.status)) // include 'active'
-  .map(session => ({
-    id: session.id,
-    studentName: session.studentName,
-    studentClass: session.studentClass,
-    profession: session.profession,
-    futureImageUrl: session.futureImageId
-      ? `${imageBaseUrl}${session.futureImageId}`
-      : `${imageBaseUrl}${session.studentImageId}`,
-    finalVideoUrl: session.videoId ? `${videoBaseUrl}${session.videoId}` : undefined,
-    createdAt: new Date(session.createdAt),
-    isPosted: session.status === 'published',
-  }));
-
-
-    console.log("items", items)
+    .filter(session => ['ready', 'published', 'active'].includes(session.status)) // include 'active'
+    .map(session => ({
+      id: session.id,
+      studentName: session.studentName,
+      studentClass: session.studentClass,
+      profession: session.profession,
+      futureImageUrl: session.futureImageId
+        ? `${imageBaseUrl}${session.futureImageId}`
+        : `${imageBaseUrl}${session.studentImageId}`,
+      finalVideoUrl: session.videoId ? `${videoBaseUrl}${session.videoId}` : undefined,
+      createdAt: new Date(session.createdAt),
+      isPosted: session.status === 'published',
+    }));
 
   useEffect(() => {
-    const loadContent = async () => {
-      if (!settings?.id) {
-        console.error('School ID not found');
-        return;
-      }
-      await loadAllSessions(settings.id);
-    };
+    if (!settings && !isLoadingSettings) {
+      loadSettings();
+    }
+  }, [settings, isLoadingSettings, loadSettings]);
 
-    loadContent();
+  useEffect(() => {
+    if (!settings?.id) return;
+
+    loadAllSessions(settings.id);
   }, [settings?.id, loadAllSessions]);
+
+
 
   const filteredItems = items.filter(item => {
     if (filter === 'posted') return item.isPosted;
@@ -160,25 +159,22 @@ const GeneratedContent: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => setFilter('all')}
-                  className={`px-3 py-1 rounded-full text-sm font-medium transition duration-200 ${
-                    filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                  className={`px-3 py-1 rounded-full text-sm font-medium transition duration-200 ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
                 >
                   All ({items.length})
                 </button>
                 <button
                   onClick={() => setFilter('unposted')}
-                  className={`px-3 py-1 rounded-full text-sm font-medium transition duration-200 ${
-                    filter === 'unposted' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                  className={`px-3 py-1 rounded-full text-sm font-medium transition duration-200 ${filter === 'unposted' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
                 >
                   Unposted ({items.filter(item => !item.isPosted).length})
                 </button>
                 <button
                   onClick={() => setFilter('posted')}
-                  className={`px-3 py-1 rounded-full text-sm font-medium transition duration-200 ${
-                    filter === 'posted' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                  className={`px-3 py-1 rounded-full text-sm font-medium transition duration-200 ${filter === 'posted' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
                 >
                   Posted ({items.filter(item => item.isPosted).length})
                 </button>
@@ -213,9 +209,8 @@ const GeneratedContent: React.FC = () => {
             {filteredItems.map((item) => (
               <div
                 key={item.id}
-                className={`bg-white rounded-lg shadow-md overflow-hidden transition-all duration-200 ${
-                  selectedItems.has(item.id) ? 'ring-2 ring-blue-500' : 'hover:shadow-lg'
-                }`}
+                className={`bg-white rounded-lg shadow-md overflow-hidden transition-all duration-200 ${selectedItems.has(item.id) ? 'ring-2 ring-blue-500' : 'hover:shadow-lg'
+                  }`}
               >
                 {/* Selection Checkbox */}
                 <div className="relative">
@@ -229,11 +224,10 @@ const GeneratedContent: React.FC = () => {
                   />
                   <button
                     onClick={() => handleSelectItem(item.id)}
-                    className={`absolute top-2 right-2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition duration-200 ${
-                      selectedItems.has(item.id)
+                    className={`absolute top-2 right-2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition duration-200 ${selectedItems.has(item.id)
                         ? 'bg-blue-600 border-blue-600 text-white'
                         : 'bg-white border-gray-300 hover:border-blue-500'
-                    }`}
+                      }`}
                   >
                     {selectedItems.has(item.id) && <CheckCircle className="w-4 h-4" />}
                   </button>

@@ -22,7 +22,7 @@ export interface SessionCreate extends SessionBase {}
 // Session object returned from backend
 export interface Session extends SessionBase {
   id: string;                        // always included for UI
-  createdAt: string;                  // ISO string from backend
+  createdAt: Date;                  // ISO string from backend
   status: SessionStatus;
   futureImageId?: string;
   videoId?: string;
