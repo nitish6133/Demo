@@ -1,12 +1,20 @@
 import { create } from 'zustand';
-import { createSession, stopSession, getSessionStatus, getSessionOutputs } from '../services/sessionService';
+import { createSession, getSessionStatus, getSessionOutputs, startFinalVideo } from '../services/sessionService';
 import { Session, CaptureState, UploadProgress } from '../types';
 import { useBrandingStore } from './useBrandingStore';
+import { serviceBaseUrl } from '../constants/appConstants';
+import {stopSession} from '../services/sessionService';
 
 interface SessionStore {
   currentSession: Session | null;
   captureState: CaptureState;
   uploadProgress: UploadProgress;
+  studentImageId?: string;
+  pendingSessionData: {
+    studentName: string;
+    studentClass: string;
+    studentImageId: string;
+  } | null;
 
   startSession: (
     studentName: string,
@@ -16,9 +24,15 @@ interface SessionStore {
     studentPhoto?: string | null
   ) => Promise<void>;
   stopSession: () => Promise<void>;
+
+  setPendingSessionData: (studentName: string, studentClass: string, studentImageId: string) => void;
+  setStudentImage: (imageId: string) => void;
+
   takePhoto: () => void;
   startRecording: () => void;
   stopRecording: () => void;
+  pauseRecording: () => void;
+  resumeRecording: () => void;
   setProfession: (profession: string) => void;
   setStatus: (status: Session['status']) => void;
   setUploadProgress: (progress: number) => void;
@@ -26,6 +40,11 @@ interface SessionStore {
   resetSession: () => void;
   pollSessionStatus: (sessionId: string) => Promise<void>;
 }
+
+// Private variables for recording
+let recordingInterval: ReturnType<typeof setInterval> | null = null;
+let recordingStartTime: number = 0;
+let elapsedTimeBeforePause: number = 0;
 
 
 export const useSessionStore = create<SessionStore>((set, get) => ({
@@ -39,41 +58,21 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     percentage: 0,
     isUploading: false,
   },
+  pendingSessionData: null,
 
-  startSession: async (
-    studentName: string,
-    studentClass: string,
-    profession: string,
-    studentImageId: string,
-    studentPhoto?: string | null
-  ) => {
+  startSession: async (studentName, studentClass, profession, studentImageId) => {
     try {
-      // ✅ Get schoolId from branding store
       const schoolId = useBrandingStore.getState().settings?.id;
-
       if (!schoolId) {
         console.error('School ID is missing from branding settings');
         return;
       }
 
-      // ✅ Send the branding store schoolId to createSession
-      const response = await createSession(
-        studentName,
-        studentClass,
-        profession,
-        schoolId,
-        studentImageId,
-        studentPhoto
-      );
+      const response = await createSession(studentName, studentClass, profession, schoolId, studentImageId);
 
-      if (response.code === 200 && response.result) {
+      if ((response.code === 200 || response.code === 3034) && response.result) {
         const session = response.result;
-        set({
-          currentSession: {
-            ...session,
-            createdAt: new Date(session.createdAt),
-          },
-        });
+        set({ currentSession: { ...session, createdAt: new Date(session.createdAt) } });
       } else {
         console.error('Failed to create session:', response.message);
       }
@@ -82,62 +81,84 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     }
   },
 
-
   stopSession: async () => {
     const { currentSession } = get();
     if (!currentSession) return;
 
     try {
-      set({
-        currentSession: { ...currentSession, status: 'uploading' },
-        uploadProgress: { percentage: 0, isUploading: true }
-      });
+      set({ currentSession: { ...currentSession, status: 'uploading' }, uploadProgress: { percentage: 0, isUploading: true } });
+
+      const uploadInterval = setInterval(() => {
+        const { uploadProgress } = get();
+        if (uploadProgress.percentage < 90) {
+          set({ uploadProgress: { ...uploadProgress, percentage: uploadProgress.percentage + 10 } });
+        }
+      }, 200);
 
       const response = await stopSession(currentSession.id);
 
-      if (response.code === 200) {
-        set({
-          uploadProgress: { percentage: 100, isUploading: false },
-          currentSession: { ...get().currentSession!, status: 'queued' }
-        });
+      clearInterval(uploadInterval);
 
-        // Start polling for status updates
+      if (response.code === 200) {
+        set({ uploadProgress: { percentage: 100, isUploading: false }, currentSession: { ...get().currentSession!, status: 'queued' } });
+
+        const branding = useBrandingStore.getState().settings;
+        if (!branding) {
+          console.error('Branding settings not found');
+          return;
+        }
+
+        const futureImageUrl = `${serviceBaseUrl}/images/${currentSession.futureImageId || currentSession.studentImageId}`;
+        const teacherVideoUrl = `${serviceBaseUrl}/videos/${currentSession.id}/teacher`;
+
+        const finalVideoResponse = await startFinalVideo(
+          currentSession.id,
+          currentSession.schoolId,
+          teacherVideoUrl,
+          futureImageUrl,
+          branding.branding.logoUrl || '',
+          branding.branding.tagline || ''
+        );
+
+        if (finalVideoResponse.code === 3078 || finalVideoResponse.code === 200) {
+          console.log('Final video generation started successfully');
+        } else {
+          console.error('Failed to start final video generation:', finalVideoResponse.message);
+        }
+
         get().pollSessionStatus(currentSession.id);
       } else {
         console.error('Failed to stop session:', response.message);
+        set({ uploadProgress: { percentage: 0, isUploading: false } });
       }
     } catch (error) {
       console.error('Error stopping session:', error);
+      set({ uploadProgress: { percentage: 0, isUploading: false } });
     }
   },
 
-  pollSessionStatus: async (sessionId: string) => {
+  pollSessionStatus: async (sessionId) => {
     try {
       const response = await getSessionStatus(sessionId);
-
       if (response.code === 200 && response.result) {
         const { currentSession } = get();
-        if (currentSession) {
-          set({
-            currentSession: { ...currentSession, status: response.result.status }
-          });
+        if (!currentSession) return;
 
-          // If processing is complete, get outputs
-          if (response.result.status === 'ready') {
-            const outputsResponse = await getSessionOutputs(sessionId);
-            if (outputsResponse.code === 200 && outputsResponse.result) {
-              set({
-                currentSession: {
-                  ...get().currentSession!,
-                  futureImageUrl: outputsResponse.result.futureImageUrl,
-                  finalVideoUrl: outputsResponse.result.finalVideoUrl
-                }
-              });
-            }
-          } else if (response.result.status === 'processing' || response.result.status === 'queued') {
-            // Continue polling
-            setTimeout(() => get().pollSessionStatus(sessionId), 3000);
+        set({ currentSession: { ...currentSession, status: response.result.status } });
+
+        if (response.result.status === 'ready') {
+          const outputs = await getSessionOutputs(sessionId);
+          if (outputs.code === 200 && outputs.result) {
+            set({
+              currentSession: {
+                ...get().currentSession!,
+                futureImageUrl: outputs.result.futureImageUrl,
+                finalVideoUrl: outputs.result.finalVideoUrl,
+              },
+            });
           }
+        } else if (['processing', 'queued'].includes(response.result.status)) {
+          setTimeout(() => get().pollSessionStatus(sessionId), 3000);
         }
       }
     } catch (error) {
@@ -145,85 +166,108 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     }
   },
 
+  setPendingSessionData: (studentName, studentClass, studentImageId) => {
+    set({ pendingSessionData: { studentName, studentClass, studentImageId } });
+  },
+
+  setStudentImage: (imageId) => {
+    const { currentSession } = get();
+    if (currentSession) {
+      set({ currentSession: { ...currentSession, studentImageId: imageId } });
+    }
+  },
+
   takePhoto: () => {
-    set({
-      captureState: { ...get().captureState, hasPhoto: true }
-    });
+    set({ captureState: { ...get().captureState, hasPhoto: true } });
   },
 
   startRecording: () => {
-    set({
-      captureState: { ...get().captureState, isRecording: true, recordingDuration: 0 }
-    });
+    recordingStartTime = Date.now();
+    elapsedTimeBeforePause = 0;
+    set({ captureState: { ...get().captureState, isRecording: true, recordingDuration: 0 } });
 
-    const startTime = Date.now();
-    const interval = setInterval(() => {
+    recordingInterval = setInterval(() => {
       const { captureState } = get();
       if (captureState.isRecording) {
-        const elapsed = Math.floor((Date.now() - startTime) / 1000);
-        set({
-          captureState: { ...captureState, recordingDuration: elapsed }
-        });
-      } else {
-        clearInterval(interval);
+        const currentElapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+        set({ captureState: { ...captureState, recordingDuration: elapsedTimeBeforePause + currentElapsed } });
       }
     }, 1000);
+  },
 
-    (get() as any).recordingInterval = interval;
+  pauseRecording: () => {
+    if (recordingInterval) {
+      clearInterval(recordingInterval);
+      recordingInterval = null;
+    }
+    const currentElapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+    elapsedTimeBeforePause += currentElapsed;
+    set({ captureState: { ...get().captureState, isRecording: false } });
+  },
+
+  resumeRecording: () => {
+    recordingStartTime = Date.now();
+    set({ captureState: { ...get().captureState, isRecording: true } });
+
+    recordingInterval = setInterval(() => {
+      const { captureState } = get();
+      if (captureState.isRecording) {
+        const currentElapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+        set({ captureState: { ...captureState, recordingDuration: elapsedTimeBeforePause + currentElapsed } });
+      }
+    }, 1000);
   },
 
   stopRecording: () => {
-    const interval = (get() as any).recordingInterval;
-    if (interval) {
-      clearInterval(interval);
+    if (recordingInterval) {
+      clearInterval(recordingInterval);
+      recordingInterval = null;
     }
 
+    const currentElapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+    elapsedTimeBeforePause += currentElapsed;
+
     set({
-      captureState: { ...get().captureState, isRecording: false }
+      captureState: {
+        ...get().captureState,
+        isRecording: false,
+        recordingDuration: elapsedTimeBeforePause,
+      },
     });
   },
 
-  setProfession: (profession: string) => {
+
+
+
+  setProfession: (profession) => {
     const { currentSession } = get();
-    if (currentSession) {
-      set({ currentSession: { ...currentSession, profession } });
-    }
+    if (currentSession) set({ currentSession: { ...currentSession, profession } });
   },
 
-  setStatus: (status: Session['status']) => {
+  setStatus: (status) => {
     const { currentSession } = get();
-    if (currentSession) {
-      set({ currentSession: { ...currentSession, status } });
-    }
+    if (currentSession) set({ currentSession: { ...currentSession, status } });
   },
 
-  setUploadProgress: (percentage: number) => {
-    set({
-      uploadProgress: { ...get().uploadProgress, percentage }
-    });
-  },
+  setUploadProgress: (percentage) => set({ uploadProgress: { ...get().uploadProgress, percentage } }),
 
-  setOutputs: (futureImageUrl?: string, finalVideoUrl?: string) => {
+  setOutputs: (futureImageUrl, finalVideoUrl) => {
     const { currentSession } = get();
-    if (currentSession) {
-      set({
-        currentSession: { ...currentSession, futureImageUrl, finalVideoUrl }
-      });
-    }
+    if (currentSession) set({ currentSession: { ...currentSession, futureImageUrl, finalVideoUrl } });
   },
 
   resetSession: () => {
+    if (recordingInterval) {
+      clearInterval(recordingInterval);
+      recordingInterval = null;
+    }
+    recordingStartTime = 0;
+    elapsedTimeBeforePause = 0;
     set({
       currentSession: null,
-      captureState: {
-        isRecording: false,
-        hasPhoto: false,
-        recordingDuration: 0,
-      },
-      uploadProgress: {
-        percentage: 0,
-        isUploading: false,
-      }
+      captureState: { isRecording: false, hasPhoto: false, recordingDuration: 0 },
+      uploadProgress: { percentage: 0, isUploading: false },
+      pendingSessionData: null,
     });
   },
 }));

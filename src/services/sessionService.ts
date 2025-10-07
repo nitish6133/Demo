@@ -8,7 +8,6 @@ export const createSession = async (
   profession: string,
   schoolId: string,
   studentImageId: string,
-  studentPhoto?: string | null
 ): Promise<ApiResponse<Session>> => {
   try {
     const response = await apiClient.post('/sessions', {
@@ -16,8 +15,7 @@ export const createSession = async (
       studentClass,
       profession,
       schoolId,
-      studentImageId,
-      studentPhoto
+      studentImageId
     });
     return response.data;
   } catch (error: any) {
@@ -68,6 +66,65 @@ export const getSessionOutputs = async (
       result: null,  // ✅ Add this
       code: error.response?.status || 500,
       message: error.response?.data?.message || 'Failed to get session outputs'
+    };
+  }
+};
+
+interface FinalVideoRequest {
+  sessionId: string;
+  schoolId: string;
+  inputs: {
+    teacherVideoUrl: string;
+    futureImageUrl: string;
+  };
+  branding: {
+    logoUrl: string;
+    tagline: string;
+  };
+}
+
+export const startFinalVideo = async (
+  sessionId: string,
+  schoolId: string,
+  teacherVideoUrl: string,
+  futureImageUrl: string,
+  logoUrl: string,
+  tagline: string
+): Promise<ApiResponse<{ status: string; executionId: string | null }>> => {
+  try {
+    const payload: FinalVideoRequest = {
+      sessionId,
+      schoolId,
+      inputs: {
+        teacherVideoUrl,
+        futureImageUrl
+      },
+      branding: {
+        logoUrl,
+        tagline
+      }
+    };
+
+    const response = await apiClient.post('/startFinalVideo', payload);
+    return response.data;
+  } catch (error: any) {
+    return {
+      result: null,
+      code: error.response?.status || 500,
+      message: error.response?.data?.message || 'Failed to start final video generation'
+    };
+  }
+};
+
+export const getAllSessions = async (schoolId: string): Promise<ApiResponse<Session[]>> => {
+  try {
+    const response = await apiClient.get(`/sessions?schoolId=${schoolId}`);
+    return response.data;
+  } catch (error: any) {
+    return {
+      result: null,
+      code: error.response?.status || 500,
+      message: error.response?.data?.message || 'Failed to fetch sessions'
     };
   }
 };

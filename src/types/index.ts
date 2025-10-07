@@ -27,6 +27,9 @@ export interface Session {
   createdAt: Date;
   futureImageUrl?: string;
   finalVideoUrl?: string;
+  studentImageId?: string;
+  futureImageId?: string;
+  schoolId: string;
 }
 
 export interface CaptureState {

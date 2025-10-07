@@ -27,9 +27,8 @@ const StartSessionForm: React.FC<StartSessionFormProps> = ({ onSessionStart }) =
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  const startSession = useSessionStore((state) => state.startSession);
+  const setPendingSessionData = useSessionStore((state) => state.setPendingSessionData);
   const loadBrandingSettings = useBrandingStore((state) => state.loadSettings);
-  // const uploadImage = useBrandingStore((state) => state.uploadImage); // Reuse store function logoUrl
   const { uploadStudentImage } = useBrandingStore()
 
   useEffect(() => {
@@ -104,14 +103,13 @@ const StartSessionForm: React.FC<StartSessionFormProps> = ({ onSessionStart }) =
 
     // Upload via branding store
     const uploadResponse = await uploadStudentImage(file);
-    console.log("uploadResponse", uploadResponse);
 
-    const studentImageId = uploadResponse.result; // ✅ string | undefined
+    const studentImageId = uploadResponse.result;
 
     if (!studentImageId) throw new Error("Failed to upload student image");
 
-    // Start session with uploaded image
-    await startSession(studentName.trim(), studentClass, "Student", studentImageId);
+    // Store pending session data - don't create session yet
+    setPendingSessionData(studentName.trim(), studentClass, studentImageId);
 
     onSessionStart();
   } catch (error) {

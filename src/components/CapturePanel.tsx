@@ -4,6 +4,7 @@ import { useSessionStore } from '../stores/useSessionStore';
 import { useBrandingStore } from '../stores/useBrandingStore';
 import { formatDuration } from '../utils/validators';
 import { getLogoUrl } from '../utils/imageUtils';
+import { imageBaseUrl } from '../constants/appConstants';
 
 const professions = [
   'Astronaut', 'Doctor', 'Pilot', 'Scientist', 'Engineer', 'Teacher',
@@ -20,10 +21,15 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
     currentSession,
     captureState,
     startRecording,
-    stopRecording,
-    stopSession,
-    setProfession
+    pauseRecording,
+    resumeRecording,
+    setProfession,
+    pendingSessionData,
+    startSession,
+    stopRecording
   } = useSessionStore();
+
+  console.log("currentSession", currentSession)
 
   const { settings } = useBrandingStore();
   const [selectedProfession, setSelectedProfession] = useState('');
@@ -37,18 +43,33 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
     setSelectedProfession(profession);
   };
 
-  const handleConfirmProfession = () => {
-    if (selectedProfession) {
-      setProfession(selectedProfession);
-      setRecordingStep('generating');
+  const handleConfirmProfession = async () => {
+    if (!selectedProfession || !pendingSessionData) return;
 
-      // Simulate AI image generation
+    setProfession(selectedProfession);
+    setRecordingStep('generating');
+
+    try {
+      // Create the session FIRST to get futureImageId
+      await startSession(
+        pendingSessionData.studentName,
+        pendingSessionData.studentClass,
+        selectedProfession,
+        pendingSessionData.studentImageId
+      );
+
+      // Wait a moment for the session to be fully created
       setTimeout(() => {
+        // Now show the AI image using futureImageId from currentSession
         setShowAIImage(true);
         setRecordingStep('confirmed');
-      }, 3000);
+      }, 1000);
+    } catch (error) {
+      console.error('Error confirming profession:', error);
+      setRecordingStep('selecting');
     }
   };
+
 
   const startCamera = async () => {
     try {
@@ -104,7 +125,6 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
     if (captureState.isRecording) {
       stopRecording();
     }
-    stopSession();
     onSessionComplete();
   };
 
@@ -120,11 +140,18 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
       }, 1000);
     } else if (captureState.isRecording) {
       // Pause recording
-      stopRecording();
+      pauseRecording();
     } else if (!captureState.isRecording && captureState.recordingDuration > 0) {
-      // Stop recording (was paused)
-      handleStopSession();
+      // Resume recording (was paused)
+      resumeRecording();
     }
+  };
+
+  const handleStopRecording = () => {
+    if (captureState.isRecording) {
+      pauseRecording();
+    }
+    handleStopSession();
   };
 
   const getRecordingButtonText = () => {
@@ -133,7 +160,7 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
     } else if (captureState.isRecording) {
       return 'Pause Recording';
     } else {
-      return 'Stop Recording';
+      return 'Resume Recording';
     }
   };
 
@@ -143,7 +170,7 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
     } else if (captureState.isRecording) {
       return 'bg-orange-600 hover:bg-orange-700';
     } else {
-      return 'bg-green-600 hover:bg-green-700';
+      return 'bg-blue-600 hover:bg-blue-700';
     }
   };
 
@@ -155,7 +182,7 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
       <div className="flex-1 bg-black rounded-lg overflow-hidden relative mb-3 min-h-0">
         {/* Recording Controls - Always on top */}
         {recordingStep === 'confirmed' && (
-          <div className="absolute top-2 left-2 right-2 z-30">
+          <div className="absolute top-2 left-2 right-2 z-30 space-y-2">
             <button
               onClick={handleRecordingControl}
               className={`w-full flex items-center justify-center py-3 px-6 text-white font-semibold rounded-lg transition duration-200 ${getRecordingButtonColor()} shadow-lg backdrop-blur-sm`}
@@ -163,6 +190,14 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
               <Video className="w-5 h-5 mr-2" />
               {getRecordingButtonText()}
             </button>
+            {!captureState.isRecording && captureState.recordingDuration > 0 && (
+              <button
+                onClick={handleStopRecording}
+                className="w-full flex items-center justify-center py-3 px-6 text-white font-semibold rounded-lg transition duration-200 bg-green-600 hover:bg-green-700 shadow-lg backdrop-blur-sm"
+              >
+                Stop Recording
+              </button>
+            )}
           </div>
         )}
 
@@ -188,13 +223,18 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
           {showAIImage ? (
             <div className="relative w-full h-full">
               <img
-                src="https://images.pexels.com/photos/1040881/pexels-photo-1040881.jpeg?auto=compress&cs=tinysrgb&w=400"
+                src={currentSession?.futureImageId
+                  ? `${imageBaseUrl}${currentSession.futureImageId}`
+                  : `${imageBaseUrl}${currentSession?.studentImageId || pendingSessionData?.studentImageId}`}
                 alt="Future self"
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTn_YEVIqED0OrC_kAJyXnjudm0LyDbttrFDSYTHOOF1U5EoxtH5gyjseSUroYkQYOjJaI&usqp=CAU';
+                }}
               />
               <div className="absolute bottom-2 left-2 right-2 text-white">
                 <h4 className="text-lg font-bold drop-shadow-lg mb-1">
-                  {currentSession?.studentName}
+                  {currentSession?.studentName || pendingSessionData?.studentName}
                 </h4>
                 <p className="text-sm opacity-90 drop-shadow-md">
                   Future {selectedProfession}

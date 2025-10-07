@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Image, Video, Share2, Download, Calendar, User, GraduationCap, Briefcase, CheckCircle, X } from 'lucide-react';
 import Footer from '../components/Footer';
+import { getAllSessions } from '../services/sessionService';
+import { useBrandingStore } from '../stores/useBrandingStore';
+import { serviceBaseUrl } from '../constants/appConstants';
 
 interface GeneratedItem {
   id: string;
@@ -22,57 +25,40 @@ const GeneratedContent: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'posted' | 'unposted'>('all');
 
   useEffect(() => {
-    // Mock API call to load generated content
     const loadGeneratedContent = async () => {
       setIsLoading(true);
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const branding = useBrandingStore.getState().settings;
+      if (!branding?.id) {
+        console.error('School ID not found');
+        setIsLoading(false);
+        return;
+      }
 
-      // Mock data
-      const mockItems: GeneratedItem[] = [
-        {
-          id: '1',
-          studentName: 'Alex Johnson',
-          studentClass: '5th Grade',
-          profession: 'Astronaut',
-          futureImageUrl: 'https://images.pexels.com/photos/1040881/pexels-photo-1040881.jpeg?auto=compress&cs=tinysrgb&w=400',
-          finalVideoUrl: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
-          createdAt: new Date('2024-01-15'),
-          isPosted: true,
-        },
-        {
-          id: '2',
-          studentName: 'Emma Davis',
-          studentClass: '4th Grade',
-          profession: 'Doctor',
-          futureImageUrl: 'https://images.pexels.com/photos/1181519/pexels-photo-1181519.jpeg?auto=compress&cs=tinysrgb&w=400',
-          finalVideoUrl: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
-          createdAt: new Date('2024-01-14'),
-          isPosted: false,
-        },
-        {
-          id: '3',
-          studentName: 'Michael Chen',
-          studentClass: '6th Grade',
-          profession: 'Engineer',
-          futureImageUrl: 'https://images.pexels.com/photos/1181467/pexels-photo-1181467.jpeg?auto=compress&cs=tinysrgb&w=400',
-          createdAt: new Date('2024-01-13'),
-          isPosted: false,
-        },
-        {
-          id: '4',
-          studentName: 'Sofia Rodriguez',
-          studentClass: '3rd Grade',
-          profession: 'Teacher',
-          futureImageUrl: 'https://images.pexels.com/photos/1181424/pexels-photo-1181424.jpeg?auto=compress&cs=tinysrgb&w=400',
-          finalVideoUrl: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
-          createdAt: new Date('2024-01-12'),
-          isPosted: true,
-        },
-      ];
+      const response = await getAllSessions(branding.id);
 
-      setItems(mockItems);
+      if (response.code === 200 && response.result) {
+        const sessions = response.result;
+        const mappedItems: GeneratedItem[] = sessions
+          .filter(session => session.status === 'ready' || session.status === 'published')
+          .map(session => ({
+            id: session.id,
+            studentName: session.studentName,
+            studentClass: session.studentClass,
+            profession: session.profession,
+            futureImageUrl: session.futureImageId
+              ? `${serviceBaseUrl}/images/${session.futureImageId}`
+              : `${serviceBaseUrl}/images/${session.studentImageId}`,
+            finalVideoUrl: session.videoId ? `${serviceBaseUrl}/videos/${session.videoId}` : undefined,
+            createdAt: new Date(session.createdAt),
+            isPosted: session.status === 'published',
+          }));
+
+        setItems(mappedItems);
+      } else {
+        console.error('Failed to load sessions:', response.message);
+      }
+
       setIsLoading(false);
     };
 
@@ -257,6 +243,9 @@ const GeneratedContent: React.FC = () => {
                     src={item.futureImageUrl}
                     alt={`Future ${item.profession}`}
                     className="w-full h-48 object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS4zYIcFuWWsfSvBJdujgD_4dq6Sg6cPUHi3tVx3C9Vp1inuOLdpurfXeY&s';  //only apple
+                    }}
                   />
                   <button
                     onClick={() => handleSelectItem(item.id)}

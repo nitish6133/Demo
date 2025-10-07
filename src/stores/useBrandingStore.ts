@@ -111,18 +111,14 @@ export const useBrandingStore = create<BrandingStore>((set, get) => ({
   },
 
   uploadStudentImage: async (file: File) => {
-  const response = await uploadLogo(file); // ApiResponse<{ logoUrl: string }>
-  
-  return {
-    code: response.code,
-    message: response.message,
-    result: response.result?.logoUrl ?? undefined, // convert {logoUrl} to string
-  };
-},
+    const response = await uploadLogo(file); // ApiResponse<{ logoUrl: string }>
 
-
-
-
+    return {
+      code: response.code,
+      message: response.message,
+      result: response.result?.logoUrl ?? undefined, // convert {logoUrl} to string
+    };
+  },
 
   updateSettings: (updates: Partial<BrandingSettings>) => {
     set(state => ({
