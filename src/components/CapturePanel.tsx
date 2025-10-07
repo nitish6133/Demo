@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Camera, Video, RotateCcw } from 'lucide-react';
+import { Camera, Video, RotateCcw, Loader2 } from 'lucide-react';
 import { useSessionStore } from '../stores/useSessionStore';
 import { useBrandingStore } from '../stores/useBrandingStore';
 import { formatDuration } from '../utils/validators';
@@ -22,11 +22,11 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
     captureState,
     startRecording,
     pauseRecording,
-    resumeRecording,
     setProfession,
     pendingSessionData,
     startSession,
-    stopRecording
+    stopRecording,
+    stopSession: stopSessionFromStore
   } = useSessionStore();
 
   console.log("currentSession", currentSession)
@@ -34,6 +34,8 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
   const { settings } = useBrandingStore();
   const [selectedProfession, setSelectedProfession] = useState('');
   const [recordingStep, setRecordingStep] = useState<'ready' | 'recording' | 'selecting' | 'confirmed' | 'generating'>('ready');
+  const [isStoppingRecording, setIsStoppingRecording] = useState(false);
+  const [stopError, setStopError] = useState<string | null>(null);
   const [showAIImage, setShowAIImage] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
@@ -141,17 +143,37 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
     } else if (captureState.isRecording) {
       // Pause recording
       pauseRecording();
-    } else if (!captureState.isRecording && captureState.recordingDuration > 0) {
-      // Resume recording (was paused)
-      resumeRecording();
     }
   };
 
-  const handleStopRecording = () => {
+  // MODIFIED: Stop recording and trigger the store's stopSession which handles UI flow
+  const handleStopRecording = async () => {
     if (captureState.isRecording) {
       pauseRecording();
     }
-    handleStopSession();
+
+    // Stop the recording timer
+    stopRecording();
+
+    setIsStoppingRecording(true);
+    setStopError(null);
+
+    try {
+      // Call the store's stopSession which handles:
+      // 1. Upload progress UI
+      // 2. Calling stopSession API
+      // 3. Calling startFinalVideo API
+      // 4. Starting status polling
+      await stopSessionFromStore();
+
+      // After successful stop, trigger the completion callback
+      handleStopSession();
+    } catch (error) {
+      setStopError(error instanceof Error ? error.message : 'An unexpected error occurred');
+      console.error('Error stopping session:', error);
+    } finally {
+      setIsStoppingRecording(false);
+    }
   };
 
   const getRecordingButtonText = () => {
@@ -160,7 +182,7 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
     } else if (captureState.isRecording) {
       return 'Pause Recording';
     } else {
-      return 'Resume Recording';
+      return 'Recording Paused';
     }
   };
 
@@ -170,7 +192,7 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
     } else if (captureState.isRecording) {
       return 'bg-orange-600 hover:bg-orange-700';
     } else {
-      return 'bg-blue-600 hover:bg-blue-700';
+      return 'bg-gray-500 cursor-not-allowed';
     }
   };
 
@@ -183,23 +205,45 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
         {/* Recording Controls - Always on top */}
         {recordingStep === 'confirmed' && (
           <div className="absolute top-2 left-2 right-2 z-30 space-y-2">
-            <button
-              onClick={handleRecordingControl}
-              className={`w-full flex items-center justify-center py-3 px-6 text-white font-semibold rounded-lg transition duration-200 ${getRecordingButtonColor()} shadow-lg backdrop-blur-sm`}
-            >
-              <Video className="w-5 h-5 mr-2" />
-              {getRecordingButtonText()}
-            </button>
+            {/* Show pause button only while recording */}
+            {captureState.isRecording && (
+              <button
+                onClick={handleRecordingControl}
+                disabled={isStoppingRecording}
+                className={`w-full flex items-center justify-center py-3 px-6 text-white font-semibold rounded-lg transition duration-200 ${getRecordingButtonColor()} shadow-lg backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <Video className="w-5 h-5 mr-2" />
+                {getRecordingButtonText()}
+              </button>
+            )}
+
+            {/* Show stop button only when paused */}
             {!captureState.isRecording && captureState.recordingDuration > 0 && (
               <button
                 onClick={handleStopRecording}
-                className="w-full flex items-center justify-center py-3 px-6 text-white font-semibold rounded-lg transition duration-200 bg-green-600 hover:bg-green-700 shadow-lg backdrop-blur-sm"
+                disabled={isStoppingRecording}
+                className="w-full flex items-center justify-center py-3 px-6 text-white font-semibold rounded-lg transition duration-200 bg-green-600 hover:bg-green-700 shadow-lg backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Stop Recording
+                {isStoppingRecording ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Stop Recording'
+                )}
               </button>
+            )}
+
+            {/* Error message */}
+            {stopError && (
+              <div className="w-full p-3 bg-red-500/90 text-white text-sm rounded-lg shadow-lg backdrop-blur-sm">
+                {stopError}
+              </div>
             )}
           </div>
         )}
+
 
         {/* Top Half - AI Future Image */}
         <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-br from-purple-900 to-blue-900">

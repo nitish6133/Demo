@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Cog, CheckCircle, Send, Heart, Image } from 'lucide-react';
+import { Clock, Cog, CheckCircle, Send, Heart, Image, Upload } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useSessionStore } from '../stores/useSessionStore';
 
@@ -14,9 +14,16 @@ const SessionStatus: React.FC<SessionStatusProps> = ({ onNewSession }) => {
 
   const getStatusDisplay = () => {
     switch (currentSession.status) {
+      case 'uploading':
+        return {
+          icon: <Upload className="w-6 h-6 text-blue-500" />,
+          title: 'Uploading...',
+          description: 'Please wait...',
+          color: 'blue',
+        };
       case 'queued':
         return {
-          icon: <Clock className="w-6 h-6 text-yellow-500 animate-spin" />,
+          icon: <Clock className="w-6 h-6 text-yellow-500" />,
           title: 'Queued for Processing',
           description: 'Your session is in the queue...',
           color: 'yellow',

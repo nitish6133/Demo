@@ -7,6 +7,7 @@ export type SessionStatus =
   | "ready"
   | "published";
 
+// Base session info
 export interface SessionBase {
   studentName: string;
   studentClass: string;
@@ -15,18 +16,22 @@ export interface SessionBase {
   studentImageId: string;
 }
 
+// Session creation request
 export interface SessionCreate extends SessionBase {}
 
+// Session object returned from backend
 export interface Session extends SessionBase {
-  id: string;            // always included for UI
-  createdAt: string;     // ISO date string
+  id: string;                        // always included for UI
+  createdAt: string;                  // ISO string from backend
   status: SessionStatus;
   futureImageId?: string;
   videoId?: string;
   outputs?: Record<string, any>;
   instagramUrl?: string;
+  finalVideoUrl?: string;
 }
 
+// Session update payload
 export interface SessionUpdate {
   status?: SessionStatus;
   futureImageId?: string;
@@ -36,7 +41,6 @@ export interface SessionUpdate {
 }
 
 // Extra UI models
-
 export interface CaptureState {
   isRecording: boolean;
   hasPhoto: boolean;

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { createSession, getSessionStatus, getSessionOutputs, startFinalVideo } from '../services/sessionService';
+import { createSession, getSessionStatus, getSessionOutputs, startFinalVideo, getAllSessions } from '../services/sessionService';
 import { Session, CaptureState, UploadProgress } from '../types';
 import { useBrandingStore } from './useBrandingStore';
 import { serviceBaseUrl } from '../constants/appConstants';
@@ -15,6 +15,12 @@ interface SessionStore {
     studentClass: string;
     studentImageId: string;
   } | null;
+
+  // For generated content page
+  allSessions: Session[];
+  latestSession: Session | null;
+  isLoadingSessions: boolean;
+  sessionsError: string | null;
 
   startSession: (
     studentName: string,
@@ -32,13 +38,15 @@ interface SessionStore {
   startRecording: () => void;
   stopRecording: () => void;
   pauseRecording: () => void;
-  resumeRecording: () => void;
   setProfession: (profession: string) => void;
   setStatus: (status: Session['status']) => void;
   setUploadProgress: (progress: number) => void;
   setOutputs: (futureImageUrl?: string, finalVideoUrl?: string) => void;
   resetSession: () => void;
   pollSessionStatus: (sessionId: string) => Promise<void>;
+
+  // New methods for generated content
+  loadAllSessions: (schoolId: string) => Promise<void>;
 }
 
 // Private variables for recording
@@ -60,6 +68,12 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   },
   pendingSessionData: null,
 
+  // For generated content page
+  allSessions: [],
+  latestSession: null,
+  isLoadingSessions: false,
+  sessionsError: null,
+
   startSession: async (studentName, studentClass, profession, studentImageId) => {
     try {
       const schoolId = useBrandingStore.getState().settings?.id;
@@ -72,7 +86,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
 
       if ((response.code === 200 || response.code === 3034) && response.result) {
         const session = response.result;
-        set({ currentSession: { ...session, createdAt: new Date(session.createdAt) } });
+        set({ currentSession: { ...session, videoId: session.videoId ?? '', createdAt: new Date(session.createdAt).toISOString() } });
       } else {
         console.error('Failed to create session:', response.message);
       }
@@ -152,7 +166,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
             set({
               currentSession: {
                 ...get().currentSession!,
-                futureImageUrl: outputs.result.futureImageUrl,
+                futureImageId: outputs.result.futureImageUrl,
                 finalVideoUrl: outputs.result.finalVideoUrl,
               },
             });
@@ -205,18 +219,6 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     set({ captureState: { ...get().captureState, isRecording: false } });
   },
 
-  resumeRecording: () => {
-    recordingStartTime = Date.now();
-    set({ captureState: { ...get().captureState, isRecording: true } });
-
-    recordingInterval = setInterval(() => {
-      const { captureState } = get();
-      if (captureState.isRecording) {
-        const currentElapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
-        set({ captureState: { ...captureState, recordingDuration: elapsedTimeBeforePause + currentElapsed } });
-      }
-    }, 1000);
-  },
 
   stopRecording: () => {
     if (recordingInterval) {
@@ -251,9 +253,9 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
 
   setUploadProgress: (percentage) => set({ uploadProgress: { ...get().uploadProgress, percentage } }),
 
-  setOutputs: (futureImageUrl, finalVideoUrl) => {
+  setOutputs: (futureImageId, finalVideoUrl) => {
     const { currentSession } = get();
-    if (currentSession) set({ currentSession: { ...currentSession, futureImageUrl, finalVideoUrl } });
+    if (currentSession) set({ currentSession: { ...currentSession, futureImageId, finalVideoUrl } });
   },
 
   resetSession: () => {
@@ -270,4 +272,89 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       pendingSessionData: null,
     });
   },
+
+ loadAllSessions: async (schoolId: string) => {
+  try {
+    set({ isLoadingSessions: true, sessionsError: null });
+
+    const response = await getAllSessions(schoolId);
+    console.log("response", response);
+
+    if (!response || !response.result) {
+      set({
+        sessionsError: response?.message || "No session data received",
+        isLoadingSessions: false,
+      });
+      return;
+    }
+
+    let sessions: Session[] = [];
+
+    // ✅ Case 1: API returns array of sessions
+    if (Array.isArray(response.result)) {
+      sessions = response.result;
+    }
+
+    // ✅ Case 2: API returns { latest: {...} }
+    else if (
+      typeof response.result === "object" &&
+      response.result !== null &&
+      "latest" in response.result
+    ) {
+      sessions = [(response.result as { latest: Session }).latest];
+    }
+
+    // ✅ Case 3: Single session object directly
+    else if (
+      typeof response.result === "object" &&
+      response.result !== null &&
+      "id" in response.result
+    ) {
+      sessions = [response.result];
+    }
+
+    // ✅ Normalize session data
+    const formattedSessions: Session[] = sessions.map((session: any) => ({
+      id: session.id,
+      studentName: session.studentName,
+      studentClass: session.studentClass,
+      profession: session.profession,
+      schoolId: session.schoolId,
+      studentImageId: session.studentImageId,
+      futureImageId: session.futureImageId,
+      videoId: session.videoId,
+      outputs: session.outputs || {},
+      instagramUrl: session.instagramUrl,
+      status: session.status as Session['status'],
+      createdAt: (() => {
+        if (typeof session.createdAt === "string") {
+          const dateStr = session.createdAt.substring(0, 14);
+          const formatted = dateStr.replace(
+            /(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/,
+            "$1-$2-$3T$4:$5:$6"
+          );
+          return new Date(formatted).toISOString();
+        }
+        return new Date(session.createdAt).toISOString();
+      })(),
+    }));
+
+    // ✅ Update store
+    set({
+      allSessions: formattedSessions,
+      latestSession: formattedSessions[0] || null,
+      isLoadingSessions: false,
+    });
+  } catch (error) {
+    console.error("Error loading sessions:", error);
+    set({
+      sessionsError:
+        error instanceof Error ? error.message : "Failed to load sessions",
+      isLoadingSessions: false,
+    });
+  }
+},
+
+
+
 }));
