@@ -42,6 +42,41 @@ export const getSessionStatus = async (
   }
 };
 
+export const createSessionInitial = async (
+  schoolId: string,
+  studentName: string,
+  studentClass: string, // Added studentClass
+  studentImageId: string
+): Promise<ApiResponse<{ sessionId: string }>> => {
+  try {
+    const payload = { schoolId, studentName, studentClass, studentImageId }; // Included studentClass in payload
+    const response = await apiClient.post('/sessions', payload);
+    return response.data;
+  } catch (error: any) {
+    return {
+      result: null,
+      code: error.response?.status || 500,
+      message: error.response?.data?.message || 'Failed to create session',
+    };
+  }
+};
+
+
+export const stopSessionApi = async (
+  sessionId: string
+): Promise<ApiResponse<{ message: string }>> => {
+  try {
+    const response = await apiClient.post(`/sessions/${sessionId}/stop`);
+    return response.data;
+  } catch (error: any) {
+    return {
+      result: null,
+      code: error.response?.status || 500,
+      message: error.response?.data?.message || 'Failed to stop session',
+    };
+  }
+};
+
 export const getSessionOutputs = async (
   sessionId: string
 ): Promise<ApiResponse<{ futureImageUrl?: string; finalVideoUrl?: string }>> => {

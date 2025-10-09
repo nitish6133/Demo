@@ -1,32 +1,46 @@
 import { create } from 'zustand';
-import { createSession, getSessionStatus, getSessionOutputs, startFinalVideo, getAllSessions } from '../services/sessionService';
+import {
+  createSession,
+  getSessionStatus,
+  getSessionOutputs,
+  startFinalVideo,
+  getAllSessions,
+  stopSessionApi,
+  createSessionInitial,
+} from '../services/sessionService';
+import { createJob, getJobStatus as getJobStatusApi } from '../services/jobService';
 import { Session, CaptureState, UploadProgress } from '../types';
 import { useBrandingStore } from './useBrandingStore';
 import { uploadFile } from '../services/brandingService';
-import { backendFormatToDate } from '../utils/dateUtils'; // Import necessary date utils
+import { backendFormatToDate } from '../utils/dateUtils';
 
 interface SessionStore {
   currentSession: Session | null;
   captureState: CaptureState;
   uploadProgress: UploadProgress;
-  studentImageId?: string;
   pendingSessionData: {
     studentName: string;
     studentClass: string;
     studentImageId: string;
   } | null;
 
+  sessionId: string | null;
+  jobId: string | null;
+  isCreatingJob: boolean;
+  isPollingJob: boolean;
+  jobError: string | null;
+
   allSessions: Session[];
   latestSession: Session | null;
   isLoadingSessions: boolean;
   sessionsError: string | null;
 
+  createInitialSession: () => Promise<string | null>;
   startSession: (
     studentName: string,
     studentClass: string,
     profession: string,
-    studentImageId: string,
-    studentPhoto?: string | null
+    studentImageId: string
   ) => Promise<void>;
   stopSession: () => Promise<void>;
   uploadVideo: (videoBlob: Blob) => Promise<string | null>;
@@ -40,10 +54,13 @@ interface SessionStore {
   pauseRecording: () => void;
   setProfession: (profession: string) => void;
   setStatus: (status: Session['status']) => void;
-  setUploadProgress: (progress: number) => void;
+  setUploadProgress: (percentage: number) => void;
   setOutputs: (futureImageUrl?: string, finalVideoUrl?: string) => void;
   resetSession: () => void;
   pollSessionStatus: (sessionId: string) => Promise<void>;
+
+  createJobForProfession: (studentImageUrl: string, profession: string) => Promise<void>;
+  pollJobStatus: (jobId: string) => Promise<void>;
 
   loadAllSessions: (schoolId: string) => Promise<void>;
 }
@@ -58,11 +75,50 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   uploadProgress: { percentage: 0, isUploading: false },
   pendingSessionData: null,
 
+  sessionId: null,
+  jobId: null,
+  isCreatingJob: false,
+  isPollingJob: false,
+  jobError: null,
+
   allSessions: [],
   latestSession: null,
   isLoadingSessions: false,
   sessionsError: null,
 
+  // ✅ Create initial session (Start Recording)
+  createInitialSession: async () => {
+    try {
+      const branding = useBrandingStore.getState().settings;
+      const pending = get().pendingSessionData;
+
+      if (!branding?.id || !pending) {
+        console.error('Missing schoolId or pending session data');
+        return null;
+      }
+
+      const response = await createSessionInitial(
+        branding.id,
+        pending.studentName,
+        pending.studentClass, // Passed studentClass
+        pending.studentImageId
+      );
+
+      if (response.code === 200 && response.result) {
+        const sessionId = response.result.sessionId;
+        set({ sessionId });
+        return sessionId;
+      } else {
+        console.error('Failed to create initial session:', response.message);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error creating initial session:', error);
+      return null;
+    }
+  },
+
+  // ✅ Start full session (after selecting profession)
   startSession: async (studentName, studentClass, profession, studentImageId) => {
     try {
       const schoolId = useBrandingStore.getState().settings?.id;
@@ -71,14 +127,17 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         return;
       }
 
-      const response = await createSession(studentName, studentClass, profession, schoolId, studentImageId);
+      const response = await createSession(
+        studentName,
+        studentClass,
+        profession,
+        schoolId,
+        studentImageId
+      );
+
       if ((response.code === 200 || response.code === 3034) && response.result) {
         const session = response.result;
-        set({
-          currentSession: {
-            ...session,
-          },
-        });
+        set({ currentSession: { ...session } });
       } else {
         console.error('Failed to create session:', response.message);
       }
@@ -87,23 +146,18 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     }
   },
 
+  // ✅ Upload video
   uploadVideo: async (videoBlob: Blob) => {
     try {
       const videoFile = new File([videoBlob], 'recording.mp4', { type: 'video/mp4' });
       const response = await uploadFile(videoFile);
-      console.log("response", response)
 
       if (response.code === 3003 && response.result) {
         const videoUrl = response.result;
-
         const { currentSession } = get();
+
         if (currentSession) {
-          set({
-            currentSession: {
-              ...currentSession,
-              videoId: videoUrl
-            }
-          });
+          set({ currentSession: { ...currentSession, videoId: videoUrl } });
         }
 
         return videoUrl;
@@ -117,6 +171,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     }
   },
 
+  // ✅ Stop session (after upload complete)
   stopSession: async () => {
     const { currentSession } = get();
     if (!currentSession) return;
@@ -131,23 +186,20 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         const { uploadProgress } = get();
         if (uploadProgress.percentage < 90) {
           set({
-            uploadProgress: {
-              ...uploadProgress,
-              percentage: uploadProgress.percentage + 10,
-            },
+            uploadProgress: { ...uploadProgress, percentage: uploadProgress.percentage + 10 },
           });
         }
       }, 200);
 
       const branding = useBrandingStore.getState().settings;
       if (!branding) {
-        console.error('❌ Branding settings not found');
+        console.error('Branding settings not found');
         clearInterval(uploadInterval);
         set({ uploadProgress: { percentage: 0, isUploading: false } });
         return;
       }
 
-      const futureImageUrl = currentSession.futureImageId || currentSession.studentImageId
+      const futureImageUrl = currentSession.futureImageId || currentSession.studentImageId;
       const teacherVideoUrl = currentSession.videoId || '';
 
       const finalVideoResponse = await startFinalVideo(
@@ -162,9 +214,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       clearInterval(uploadInterval);
 
       if (finalVideoResponse.code === 3078 || finalVideoResponse.code === 200) {
-        set({
-          uploadProgress: { percentage: 100, isUploading: false },
-        });
+        set({ uploadProgress: { percentage: 100, isUploading: false } });
 
         const statusResponse = await getSessionStatus(currentSession.id);
         if (statusResponse?.result) {
@@ -173,14 +223,14 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
             currentSession: {
               ...get().currentSession!,
               ...result,
-              createdAt: typeof result.createdAt === 'string'
-                ? backendFormatToDate(result.createdAt)
-                : (result.createdAt ?? get().currentSession!.createdAt),
+              createdAt:
+                typeof result.createdAt === 'string'
+                  ? backendFormatToDate(result.createdAt)
+                  : result.createdAt ?? get().currentSession!.createdAt,
             },
           });
         }
 
-   
         get().pollSessionStatus(currentSession.id);
       } else {
         console.error('Failed to start final video generation:', finalVideoResponse.message);
@@ -192,6 +242,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     }
   },
 
+  // ✅ Poll session status
   pollSessionStatus: async (sessionId) => {
     try {
       const response = await getSessionStatus(sessionId);
@@ -200,14 +251,15 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       const { currentSession } = get();
       if (!currentSession) return;
 
-      const result = response.result as Partial<Session>; 
+      const result = response.result as Partial<Session>;
       set({
         currentSession: {
           ...currentSession,
           ...result,
-          createdAt: typeof result.createdAt === 'string'
-            ? backendFormatToDate(result.createdAt)
-            : (result.createdAt ?? currentSession.createdAt),
+          createdAt:
+            typeof result.createdAt === 'string'
+              ? backendFormatToDate(result.createdAt)
+              : result.createdAt ?? currentSession.createdAt,
         },
       });
 
@@ -226,23 +278,88 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         setTimeout(() => get().pollSessionStatus(sessionId), 3000);
       }
     } catch (error) {
-      console.error('⚠️ Error polling session status:', error);
+      console.error('Error polling session status:', error);
     }
   },
 
+  // ✅ Job creation & polling
+  createJobForProfession: async (studentImageUrl, profession) => {
+    const { sessionId } = get();
+    if (!sessionId) {
+      console.error('No session ID available');
+      set({ jobError: 'No session ID available' });
+      return;
+    }
 
-  setPendingSessionData: (studentName, studentClass, studentImageId) => {
-    set({ pendingSessionData: { studentName, studentClass, studentImageId } });
+    try {
+      set({ isCreatingJob: true, jobError: null });
+      const response = await createJob(sessionId, studentImageUrl, profession);
+
+      if (response.code === 3060 && response.result) {
+        const jobId = response.result.id;
+        set({ jobId, isCreatingJob: false });
+        get().pollJobStatus(jobId);
+      } else {
+        console.error('Failed to create job:', response.message);
+        set({ jobError: response.message, isCreatingJob: false });
+      }
+    } catch (error) {
+      console.error('Error creating job:', error);
+      set({
+        jobError: error instanceof Error ? error.message : 'Failed to create job',
+        isCreatingJob: false,
+      });
+    }
   },
+
+  pollJobStatus: async (jobId) => {
+    try {
+      set({ isPollingJob: true, jobError: null });
+      const response = await getJobStatusApi(jobId);
+
+      if (response.code === 3060 && response.result) {
+        const jobStatus = response.result;
+
+        if (jobStatus.status === 'success') {
+          const futureImageUrl = jobStatus.outputs.futureImageUrl;
+          const { currentSession } = get();
+          if (currentSession) {
+            set({
+              currentSession: { ...currentSession, futureImageId: futureImageUrl },
+              isPollingJob: false,
+              jobError: null,
+            });
+          }
+        } else if (jobStatus.status === 'failed') {
+          set({ jobError: 'Job failed', isPollingJob: false });
+          const { sessionId } = get();
+          if (sessionId) await stopSessionApi(sessionId);
+        } else {
+          setTimeout(() => get().pollJobStatus(jobId), 3000);
+        }
+      } else {
+        console.error('Failed to get job status:', response.message);
+        set({ jobError: response.message, isPollingJob: false });
+      }
+    } catch (error) {
+      console.error('Error polling job status:', error);
+      set({
+        jobError: error instanceof Error ? error.message : 'Failed to poll job status',
+        isPollingJob: false,
+      });
+    }
+  },
+
+  // ✅ Basic state handlers
+  setPendingSessionData: (studentName, studentClass, studentImageId) =>
+    set({ pendingSessionData: { studentName, studentClass, studentImageId } }),
 
   setStudentImage: (imageId) => {
     const { currentSession } = get();
     if (currentSession) set({ currentSession: { ...currentSession, studentImageId: imageId } });
   },
 
-  takePhoto: () => {
-    set({ captureState: { ...get().captureState, hasPhoto: true } });
-  },
+  takePhoto: () => set({ captureState: { ...get().captureState, hasPhoto: true } }),
 
   startRecording: () => {
     recordingStartTime = Date.now();
@@ -295,7 +412,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     if (currentSession) set({ currentSession: { ...currentSession, status } });
   },
 
-  setUploadProgress: (percentage) => set({ uploadProgress: { ...get().uploadProgress, percentage } }),
+  setUploadProgress: (percentage) =>
+    set({ uploadProgress: { ...get().uploadProgress, percentage } }),
 
   setOutputs: (futureImageId, finalVideoUrl) => {
     const { currentSession } = get();
@@ -311,6 +429,11 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       captureState: { isRecording: false, hasPhoto: false, recordingDuration: 0 },
       uploadProgress: { percentage: 0, isUploading: false },
       pendingSessionData: null,
+      sessionId: null,
+      jobId: null,
+      isCreatingJob: false,
+      isPollingJob: false,
+      jobError: null,
     });
   },
 
