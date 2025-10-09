@@ -3,6 +3,7 @@ import { createSession, getSessionStatus, getSessionOutputs, startFinalVideo, ge
 import { Session, CaptureState, UploadProgress } from '../types';
 import { useBrandingStore } from './useBrandingStore';
 import { uploadFile } from '../services/brandingService';
+import { backendFormatToDate } from '../utils/dateUtils'; // Import necessary date utils
 
 interface SessionStore {
   currentSession: Session | null;
@@ -76,7 +77,6 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         set({
           currentSession: {
             ...session,
-            createdAt: new Date(session.createdAt),
           },
         });
       } else {
@@ -173,12 +173,14 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
             currentSession: {
               ...get().currentSession!,
               ...result,
-              createdAt: result.createdAt ?? get().currentSession!.createdAt,
+              createdAt: typeof result.createdAt === 'string'
+                ? backendFormatToDate(result.createdAt)
+                : (result.createdAt ?? get().currentSession!.createdAt),
             },
           });
         }
 
-        // Start polling for updates
+   
         get().pollSessionStatus(currentSession.id);
       } else {
         console.error('Failed to start final video generation:', finalVideoResponse.message);
@@ -198,12 +200,14 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       const { currentSession } = get();
       if (!currentSession) return;
 
-      const result = response.result as Partial<Session>; // ✅ cast as Partial<Session>
+      const result = response.result as Partial<Session>; 
       set({
         currentSession: {
           ...currentSession,
           ...result,
-          createdAt: result.createdAt ?? currentSession.createdAt,
+          createdAt: typeof result.createdAt === 'string'
+            ? backendFormatToDate(result.createdAt)
+            : (result.createdAt ?? currentSession.createdAt),
         },
       });
 
@@ -362,20 +366,10 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         outputs: session.outputs || {},
         instagramUrl: session.instagramUrl,
         status: session.status as Session['status'],
-        createdAt: (() => {
-          if (typeof session.createdAt === "string") {
-            const dateStr = session.createdAt.substring(0, 14);
-            const formatted = dateStr.replace(
-              /(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/,
-              "$1-$2-$3T$4:$5:$6"
-            );
-            return new Date(formatted);
-          }
-          return new Date(session.createdAt);
-        })(),
+        createdAt: typeof session.createdAt === "string"
+          ? backendFormatToDate(session.createdAt) 
+          : session.createdAt, 
       }));
-
-      // ✅ Update store
       set({
         allSessions: formattedSessions,
         latestSession: formattedSessions[0] || null,
@@ -390,7 +384,4 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       });
     }
   },
-
-
-
 }));

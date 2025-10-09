@@ -5,6 +5,10 @@ export interface BrandingSettings {
   address?: string;          // Optional address
   createdAt?: string;        // Optional creation timestamp
   updatedAt?: string;        // Optional update timestamp
+  schoolName?: string;
+  tagline?: string;
+  logoUrl?: string;
+  hashtags?: string[];
 }
 
 export interface Branding {

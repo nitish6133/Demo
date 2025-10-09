@@ -11,7 +11,6 @@ import TV from './pages/TV';
 import BrandingSettings from './pages/BrandingSettings';
 import BrandingSetup from './components/BrandingSetup';
 import GeneratedContent from './pages/GeneratedContent';
-import Register from './pages/Register';
 
 function App() {
   const { user, verifySessionPeriodically, verifyTokenAfterLogin, authState, isAuthenticated } = useAuthStore();
@@ -66,14 +65,6 @@ function App() {
               }
             />
 
-              <Route
-              path="/register"
-              element={
-                <PublicRoute>
-                  <Register />
-                </PublicRoute>
-              }
-            />
 
             {/* Admin-only route */}
             <Route

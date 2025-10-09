@@ -1,8 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Login, logoutService, registerUser, verifyTokenForLoginService, verifyTokenService } from '../services/authService';
-import { RegisterData, User } from '../types/auth';
-import { ApiResponseBlank } from '../types/apiResponse';
+import { Login, logoutService, verifyTokenForLoginService, verifyTokenService } from '../services/authService'; // Removed: registerUser
+import { User } from '../types/auth';
 import { serviceBaseUrl } from '../constants/appConstants';
 
 interface AuthState {
@@ -14,12 +13,10 @@ interface AuthState {
     authState: "notChecked" | "checking" | "valid" | "invalid";
     isAuthenticated: boolean;
     user: User | null;
-    successMessage: string | null;
     backendUrl: string;
     loginWithProvider: (provider: string) => void;
     verifyTokenAfterLogin: () => Promise<void>;
     verifySessionPeriodically: () => Promise<void>;
-    registerUser: (credentials: RegisterData) => Promise<ApiResponseBlank>;
     Login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
     loginWithGoogle: () => void;
     clearError: () => void;
@@ -36,7 +33,6 @@ export const useAuthStore = create<AuthState>()(
             error: null,
             authState: "notChecked",
             isAuthenticated: false,
-            successMessage: null,
             user: null,
             username: null,
             email: null,
@@ -166,40 +162,6 @@ export const useAuthStore = create<AuthState>()(
                 }
             },
 
-
-            registerUser: async (credentials: RegisterData): Promise<ApiResponseBlank> => {
-                set({ isLoading: true, authState: "checking" });
-                try {
-                    const response = await registerUser(credentials);
-                    if (response.code === 1001) {
-                        set({
-                            user: response.result,
-                            isAuthenticated: true,
-                            authState: "valid",
-                            successMessage: response.message,
-                        });
-                    } else {
-                        set({
-                            isAuthenticated: false,
-                            authState: "invalid",
-                            error: response.message,
-                        });
-                    }
-                    set({ isLoading: false });
-                    return response;
-                } catch (error: any) {
-                    set({
-                        isAuthenticated: false,
-                        authState: "invalid",
-                        isLoading: false,
-                        error: error.message || "Registration failed.",
-                    });
-                    return {
-                        code: 999,
-                        message: error.message || "Registration failed due to an issue.",
-                    };
-                }
-            },
 
             verifySessionPeriodically: async () => {
                 const currentUser = get().user;

@@ -25,12 +25,10 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
     setProfession,
     pendingSessionData,
     startSession,
-    stopRecording,
+    stopRecording: stopRecordingFromStore,
     stopSession: stopSessionFromStore,
     uploadVideo
   } = useSessionStore();
-
-  console.log("currentSession", currentSession)
 
   const { settings } = useBrandingStore();
   const [selectedProfession, setSelectedProfession] = useState('');
@@ -50,12 +48,9 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
 
   const handleConfirmProfession = async () => {
     if (!selectedProfession || !pendingSessionData) return;
-
     setProfession(selectedProfession);
     setRecordingStep('generating');
-
     try {
-      // Create the session FIRST to get futureImageId
       await startSession(
         pendingSessionData.studentName,
         pendingSessionData.studentClass,
@@ -63,9 +58,7 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
         pendingSessionData.studentImageId
       );
 
-      // Wait a moment for the session to be fully created
       setTimeout(() => {
-        // Now show the AI image using futureImageId from currentSession
         setShowAIImage(true);
         setRecordingStep('confirmed');
       }, 1000);
@@ -75,12 +68,10 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
     }
   };
 
-
   const startCamera = async () => {
     try {
       setCameraError(null);
 
-      // Stop existing stream if any
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
@@ -102,15 +93,31 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
   };
 
   const switchCamera = async () => {
+    const wasRecording = captureState.isRecording;
+    const wasPaused = !captureState.isRecording && captureState.recordingDuration > 0;
+
+    if (mediaRecorder && (mediaRecorder.state === 'recording' || mediaRecorder.state === 'paused')) {
+      mediaRecorder.stop();
+      await new Promise(resolve => {
+        if (mediaRecorder) {
+          mediaRecorder.onstop = () => resolve(undefined);
+        }
+      });
+      setMediaRecorder(null);
+      setRecordedChunks([]);
+      stopRecordingFromStore();
+    }
+
     const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
     setFacingMode(newFacingMode);
+
+    if (wasRecording || wasPaused) {
+      setRecordingStep('ready');
+    }
   };
 
-  // Start camera when component mounts
   React.useEffect(() => {
     startCamera();
-
-    // Cleanup on unmount
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
@@ -118,7 +125,6 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
     };
   }, [facingMode]);
 
-  // Update video element when stream changes
   React.useEffect(() => {
     const videoElement = document.getElementById('live-camera') as HTMLVideoElement;
     if (videoElement && stream) {
@@ -126,9 +132,10 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
       videoElement.play().catch(console.error);
     }
   }, [stream]);
+
   const handleStopSession = () => {
     if (captureState.isRecording) {
-      stopRecording();
+      stopRecordingFromStore();
     }
     onSessionComplete();
   };
@@ -141,23 +148,19 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
           const recorder = new MediaRecorder(stream, {
             mimeType: 'video/webm;codecs=vp8'
           });
-
           recorder.ondataavailable = (event) => {
             if (event.data && event.data.size > 0) {
               setRecordedChunks(prev => [...prev, event.data]);
             }
           };
-
           setMediaRecorder(recorder);
           recorder.start(1000);
         } catch (err) {
           console.error('Failed to start MediaRecorder:', err);
         }
       }
-
       startRecording();
       setRecordingStep('recording');
-
       setTimeout(() => {
         setRecordingStep('selecting');
       }, 1000);
@@ -176,8 +179,7 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
     if (captureState.isRecording) {
       pauseRecording();
     }
-
-    stopRecording();
+    stopRecordingFromStore();
 
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
       mediaRecorder.stop();
@@ -202,7 +204,6 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
           console.warn('⚠️ Video upload returned null');
         }
       }
-
       await stopSessionFromStore();
       handleStopSession();
     } catch (error) {
@@ -239,10 +240,9 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
     <div className="h-full flex flex-col min-h-0">
       {/* Instagram Reels Style Split View */}
       <div className="flex-1 bg-black rounded-lg overflow-hidden relative mb-3 min-h-0">
-        {/* Recording Controls - Always on top */}
+        {/* Recording Controls */}
         {recordingStep === 'confirmed' && (
           <div className="absolute top-2 left-2 right-2 z-30 space-y-2">
-            {/* Show pause button only while recording */}
             {captureState.isRecording && (
               <button
                 onClick={handleRecordingControl}
@@ -253,8 +253,6 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
                 {getRecordingButtonText()}
               </button>
             )}
-
-            {/* Show stop button only when paused */}
             {!captureState.isRecording && captureState.recordingDuration > 0 && (
               <button
                 onClick={handleStopRecording}
@@ -271,8 +269,6 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
                 )}
               </button>
             )}
-
-            {/* Error message */}
             {stopError && (
               <div className="w-full p-3 bg-red-500/90 text-white text-sm rounded-lg shadow-lg backdrop-blur-sm">
                 {stopError}
@@ -281,10 +277,8 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
           </div>
         )}
 
-
         {/* Top Half - AI Future Image */}
         <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-br from-purple-900 to-blue-900">
-          {/* School Branding Header */}
           <div className="absolute top-2 left-2 right-2 z-10">
             <div className="flex items-center text-white">
               {settings?.branding.logoUrl ? (
@@ -323,7 +317,6 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
           ) : (
             <div className="relative flex items-center justify-center h-full">
               <div className="text-center text-white">
-                {/* Step 1: Ready to Record */}
                 {recordingStep === 'ready' && (
                   <>
                     <button
@@ -336,8 +329,6 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
                     <p className="text-sm opacity-75">Press to start recording</p>
                   </>
                 )}
-
-                {/* Step 2: Recording Started */}
                 {recordingStep === 'recording' && (
                   <>
                     <button
@@ -353,8 +344,6 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
                     </div>
                   </>
                 )}
-
-                {/* Step 3: Profession Selection */}
                 {recordingStep === 'selecting' && (
                   <>
                     <div className="mb-4 w-full max-w-xs">
@@ -370,7 +359,6 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
                           </option>
                         ))}
                       </select>
-
                       {selectedProfession && (
                         <button
                           onClick={handleConfirmProfession}
@@ -383,8 +371,6 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
                     <p className="text-sm opacity-75">Select future profession</p>
                   </>
                 )}
-
-                {/* Step 4: Generating AI Image */}
                 {recordingStep === 'generating' && (
                   <>
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
@@ -419,9 +405,8 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-full object-cover"
+                  className={`w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
                 />
-
                 {/* Camera Switch Button */}
                 <button
                   onClick={switchCamera}
@@ -432,8 +417,6 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
               </>
             )}
           </div>
-
-          {/* Recording Indicator */}
           {captureState.isRecording && (
             <div className="absolute top-2 left-2 bg-red-600 px-2 py-1 rounded-full">
               <div className="flex items-center">
@@ -447,9 +430,7 @@ const CapturePanel: React.FC<CapturePanelProps> = ({ onSessionComplete }) => {
         </div>
       </div>
 
-      {/* Controls Section */}
       <div className="flex-shrink-0 space-y-3">
-        {/* Recording duration display when recording */}
         {captureState.isRecording && (
           <div className="text-center">
             <div className="inline-flex items-center px-3 py-1 bg-red-600 text-white rounded-full text-sm">

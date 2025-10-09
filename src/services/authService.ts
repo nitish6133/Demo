@@ -1,9 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import { serviceBaseUrl } from '../constants/appConstants';
-import { RegisterData } from '../types/auth';
 
-const apiKey = import.meta.env.VITE_API_KEY || "admin123";
-// Create axios instance with default config
 const apiClient = axios.create({
   baseURL: serviceBaseUrl,
   headers: {
@@ -71,29 +68,6 @@ export const Login = async (
   }
 };
 
-export const registerUser = async (data: RegisterData): Promise<any> => {
-  try {
-    const response = await axios.post(
-      `${serviceBaseUrl}/register`,
-      data,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey, // ✅ added here
-          Accept: "application/json",
-        },
-      }
-    );
-    console.log(response.data);
-    return response.data;
-  } catch (error: any) {
-    console.error(
-      "Registration Error:",
-      error.response ? error.response.data : error.message
-    );
-    throw error;
-  }
-};
 
 // 🔑 Used only after login redirect to verify and store user data
 export const verifyTokenForLoginService = async () => {

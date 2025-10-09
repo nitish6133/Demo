@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { GraduationCap, Mail, Lock, AlertCircle, UserPlus } from "lucide-react";
+import { GraduationCap, Mail, Lock, AlertCircle } from "lucide-react";
 import { useAuthStore } from "../stores/useAuthStore";
 import { useToast } from "../components/UI/ToastContainer";
 import { serviceBaseUrl } from "../constants/appConstants";
@@ -227,19 +226,6 @@ const Login: React.FC<LoginProps> = ({
             {children || "Continue with Google"}
           </button>
 
-          {/* Register Link */}
-          <div className="mt-6 text-center">
-            <Link
-              to="/register"
-              className="inline-flex items-center gap-2 px-4 py-2 text-blue-600 hover:text-blue-700 font-medium rounded-lg transition-all duration-200"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>Create Account</span>
-            </Link>
-            <p className="mt-2 text-sm text-gray-500">
-              Don't have an account? Join our platform!
-            </p>
-          </div>
         </div>
       </div>
     </div>

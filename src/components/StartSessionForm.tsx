@@ -1,4 +1,3 @@
-//StartSessionForm.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { User, GraduationCap, Camera, Check, X } from 'lucide-react';
 import { useSessionStore } from '../stores/useSessionStore';
@@ -22,6 +21,7 @@ const StartSessionForm: React.FC<StartSessionFormProps> = ({ onSessionStart }) =
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [errors, setErrors] = useState<{ studentName?: string; studentClass?: string }>({});
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -29,11 +29,15 @@ const StartSessionForm: React.FC<StartSessionFormProps> = ({ onSessionStart }) =
 
   const setPendingSessionData = useSessionStore((state) => state.setPendingSessionData);
   const loadBrandingSettings = useBrandingStore((state) => state.loadSettings);
-  const { uploadStudentImage } = useBrandingStore()
+  const { uploadStudentImage } = useBrandingStore();
 
   useEffect(() => {
     loadBrandingSettings().catch(console.error);
   }, [loadBrandingSettings]);
+
+  useEffect(() => {
+    return () => stopCamera();
+  }, []);
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,14 +52,19 @@ const StartSessionForm: React.FC<StartSessionFormProps> = ({ onSessionStart }) =
 
     setErrors({});
     setStep('photo');
-    startCamera();
+    setFacingMode('user');
+    startCamera('user');
   };
 
-  const startCamera = async () => {
+  const startCamera = async (fm: 'user' | 'environment') => {
+    stopCamera();
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: fm }, audio: false });
       streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
+      setFacingMode(fm);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
     } catch (err) {
       console.error('Error accessing camera:', err);
       alert('Cannot access camera. Please check your device or browser.');
@@ -67,6 +76,10 @@ const StartSessionForm: React.FC<StartSessionFormProps> = ({ onSessionStart }) =
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
+    // Remove srcObject when camera is stopped
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
   };
 
   const capturePhoto = () => {
@@ -76,8 +89,19 @@ const StartSessionForm: React.FC<StartSessionFormProps> = ({ onSessionStart }) =
       const context = canvas.getContext('2d');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
+
       if (context) {
-        context.drawImage(video, 0, 0);
+        context.save();
+        // Mirror only for front camera
+        if (facingMode === 'user') {
+          context.translate(canvas.width, 0);
+          context.scale(-1, 1);
+        }
+
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        context.restore();
+
         const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
         setCapturedPhoto(photoDataUrl);
         setStep('confirm');
@@ -89,35 +113,30 @@ const StartSessionForm: React.FC<StartSessionFormProps> = ({ onSessionStart }) =
   const retakePhoto = () => {
     setCapturedPhoto(null);
     setStep('photo');
-    startCamera();
+    startCamera(facingMode); // Use last used camera
   };
 
   const handleConfirmPhoto = async () => {
-  if (!capturedPhoto) return;
+    if (!capturedPhoto) return;
 
-  setIsUploading(true);
-  try {
-    // Convert base64 to File
-    const blob = await (await fetch(capturedPhoto)).blob();
-    const file = new File([blob], 'student-photo.jpg', { type: 'image/jpeg' });
+    setIsUploading(true);
+    try {
+      const blob = await (await fetch(capturedPhoto)).blob();
+      const file = new File([blob], 'student-photo.jpg', { type: 'image/jpeg' });
 
-    // Upload via branding store
-    const uploadResponse = await uploadStudentImage(file);
+      const uploadResponse = await uploadStudentImage(file);
+      const studentImageId = uploadResponse.result;
 
-    const studentImageId = uploadResponse.result;
+      if (!studentImageId) throw new Error('Failed to upload student image');
 
-    if (!studentImageId) throw new Error("Failed to upload student image");
-
-    // Store pending session data - don't create session yet
-    setPendingSessionData(studentName.trim(), studentClass, studentImageId);
-
-    onSessionStart();
-  } catch (error) {
-    console.error('Error uploading photo or starting session:', error);
-  } finally {
-    setIsUploading(false);
-  }
-};
+      setPendingSessionData(studentName.trim(), studentClass, studentImageId);
+      onSessionStart();
+    } catch (error) {
+      console.error('Error uploading photo or starting session:', error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleBack = () => {
     stopCamera();
@@ -175,11 +194,35 @@ const StartSessionForm: React.FC<StartSessionFormProps> = ({ onSessionStart }) =
       </div>
 
       <div className="relative">
-        <video ref={videoRef} autoPlay playsInline muted className="w-full h-64 object-cover rounded-lg bg-gray-900" />
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className={`w-full h-64 object-cover rounded-lg bg-gray-900 transition-transform duration-200 ${facingMode === 'user' ? 'scale-x-[-1]' : ''
+            }`}
+        />
+
         <canvas ref={canvasRef} className="hidden" />
+
+        {/* Camera frame overlay */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="w-48 h-48 border-2 border-white border-dashed rounded-full opacity-50"></div>
         </div>
+
+        {/* Camera toggle button */}
+        <button
+          type="button"
+          onClick={async () => {
+            const newFacing = facingMode === 'user' ? 'environment' : 'user';
+            stopCamera();
+            setFacingMode(newFacing);
+            startCamera(newFacing);
+          }}
+          className="absolute bottom-3 right-3 bg-white/20 hover:bg-white/40 text-white p-2 rounded-full backdrop-blur-md transition"
+        >
+          <Camera className="w-5 h-5" />
+        </button>
       </div>
 
       <div className="flex gap-3">
