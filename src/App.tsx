@@ -4,7 +4,6 @@ import { Toolbar } from './components/Toolbar';
 import { AnalyticsPanel } from './components/AnalyticsPanel';
 import { LayerControl } from './components/LayerControl';
 import { ObjectEditor } from './components/ObjectEditor';
-import { MiniMap } from './components/MiniMap';
 import { ImportExport } from './components/ImportExport';
 import { ControlBar } from './components/ControlBar';
 import { useMapStore } from './store/mapStore';
@@ -21,7 +20,6 @@ function App() {
       <MapView />
       <Toolbar />
       <AnalyticsPanel />
-      <MiniMap />
       <LayerControl />
       <ImportExport />
       <ObjectEditor />

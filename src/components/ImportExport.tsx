@@ -103,66 +103,60 @@ export function ImportExport() {
     }
   };
 
-  if (isMinimized) {
-    return (
-      <div className="absolute bottom-20 left-4 bg-white rounded-lg shadow-lg p-2 z-10">
-        <button
-          onClick={() => setIsMinimized(false)}
-          className="p-2 hover:bg-gray-100 rounded transition-colors"
-          title="Expand Import/Export"
-        >
-          <Maximize2 className="w-5 h-5 text-gray-700" />
-        </button>
-      </div>
-    );
-  }
-
+  if (isMinimized)
   return (
-    <div className="absolute bottom-20 left-4 bg-white rounded-lg shadow-xl p-4 z-10 w-64">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <FileJson className="w-5 h-5 text-gray-700" />
-          <h2 className="text-lg font-semibold text-gray-800">Data</h2>
-        </div>
-        <button
-          onClick={() => setIsMinimized(true)}
-          className="p-1 hover:bg-gray-100 rounded transition-colors"
-          title="Minimize"
-        >
-          <Minimize2 className="w-4 h-4 text-gray-600" />
-        </button>
+    <div className="absolute top-1/2 left-3 -translate-y-1/2 bg-white rounded-lg shadow-md p-1.5 z-10">
+      <button
+        onClick={() => setIsMinimized(false)}
+        className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+        title="Expand"
+      >
+        <Maximize2 className="w-4 h-4 text-gray-700" />
+      </button>
+    </div>
+  );
+
+return (
+  <div className="absolute top-[53%] left-3 -translate-y-1/2 bg-white rounded-lg shadow-md p-2 z-10 w-52 text-sm">
+    <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center gap-1.5">
+        <FileJson className="w-4 h-4 text-gray-700" />
+        <h2 className="text-base font-semibold text-gray-800">Data</h2>
       </div>
+      <button
+        onClick={() => setIsMinimized(true)}
+        className="p-1 hover:bg-gray-100 rounded transition-colors"
+        title="Minimize"
+      >
+        <Minimize2 className="w-3.5 h-3.5 text-gray-600" />
+      </button>
+    </div>
+ 
+
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded-md flex items-start gap-1.5">
+          <AlertCircle className="w-3.5 h-3.5 text-red-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-red-700">{error}</p>
         </div>
       )}
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         <div>
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Export</h3>
-          <div className="space-y-2">
-            <button
-              onClick={handleExportGeoJSON}
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Export GeoJSON
-            </button>
+          <h3 className="text-xs font-medium text-gray-700 mb-1">Export</h3>
+          <div className="space-y-1.5">
             <button
               onClick={handleExportJSON}
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+              className="w-full flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-2.5 rounded-md transition-colors"
             >
-              <Download className="w-4 h-4" />
-              Export JSON
+              <Download className="w-3.5 h-3.5" />
+              JSON
             </button>
           </div>
         </div>
 
-        <div className="pt-3 border-t border-gray-200">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Import</h3>
+        <div className="pt-2 border-t border-gray-200">
+          <h3 className="text-xs font-medium text-gray-700 mb-1">Import</h3>
           <input
             ref={fileInputRef}
             type="file"
@@ -173,19 +167,20 @@ export function ImportExport() {
           />
           <label
             htmlFor="file-import"
-            className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors cursor-pointer"
+            className="w-full flex items-center justify-center gap-1.5 bg-green-600 hover:bg-green-700 text-white font-medium py-1.5 px-2.5 rounded-md transition-colors cursor-pointer"
           >
-            <Upload className="w-4 h-4" />
-            Import File
+            <Upload className="w-3.5 h-3.5" />
+            Import
           </label>
         </div>
       </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <p className="text-xs text-gray-500">
-          {objects.length} object{objects.length !== 1 ? 's' : ''} in current design
+      <div className="mt-2 pt-2 border-t border-gray-200">
+        <p className="text-[11px] text-gray-500 text-center">
+          {objects.length} object{objects.length !== 1 ? 's' : ''} in design
         </p>
       </div>
     </div>
   );
+
 }

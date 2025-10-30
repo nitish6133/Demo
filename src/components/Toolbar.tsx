@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Plus, Minimize2, Maximize2, Building, TreeDeciduous, Trees, Activity, Flame, Droplet, Store, Trash2 } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
-import { ObjectType, ShapeType, OBJECT_ICONS } from '../types/urbanTypes';
+import { ObjectType, ShapeType } from '../types/urbanTypes';
 
 const OBJECT_OPTIONS: { type: ObjectType; label: string; icon: typeof Building }[] = [
   { type: 'building', label: 'Building', icon: Building },
@@ -59,9 +59,9 @@ export function Toolbar() {
   }
 
   return (
-    <div className="absolute top-4 left-4 bg-white rounded-lg shadow-xl p-4 z-10 w-72 max-h-[80vh] overflow-y-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-800">Tools</h2>
+    <div className="absolute top-3 left-3 bg-white rounded-lg shadow-md p-2 z-10 w-56 max-h-[70vh] overflow-y-auto text-sm">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-base font-semibold text-gray-800">Tools</h2>
         <button
           onClick={() => setIsMinimized(true)}
           className="p-1 hover:bg-gray-100 rounded transition-colors"
@@ -71,44 +71,42 @@ export function Toolbar() {
         </button>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-2">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-xs font-medium text-gray-600 mb-1">
             Object Type
           </label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-1.5">
             {OBJECT_OPTIONS.map(({ type, label, icon: Icon }) => (
               <button
                 key={type}
                 onClick={() => setSelectedType(type)}
-                className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
-                  selectedType === type
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                } ${isAddingObject ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`flex items-center gap-1.5 p-2 rounded-md border text-xs transition-all ${selectedType === type
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  } ${isAddingObject ? 'opacity-50 cursor-not-allowed' : ''}`}
                 disabled={isAddingObject}
               >
-                <Icon className="w-4 h-4" />
-                <span className="text-sm font-medium">{label}</span>
+                <Icon className="w-3.5 h-3.5" />
+                {label}
               </button>
             ))}
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-xs font-medium text-gray-600 mb-1">
             Shape
           </label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-1.5">
             {SHAPE_OPTIONS.map(({ shape, label }) => (
               <button
                 key={shape}
                 onClick={() => setSelectedShape(shape)}
-                className={`p-3 rounded-lg border-2 transition-all text-sm font-medium ${
-                  selectedShape === shape
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                } ${isAddingObject ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`p-2 rounded-md border text-xs font-medium transition-all ${selectedShape === shape
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  } ${isAddingObject ? 'opacity-50 cursor-not-allowed' : ''}`}
                 disabled={isAddingObject}
               >
                 {label}
@@ -119,21 +117,20 @@ export function Toolbar() {
 
         <button
           onClick={handleAddObjectClick}
-          className={`w-full flex items-center justify-center gap-2 font-medium py-3 px-4 rounded-lg transition-colors shadow-md ${
-            isAddingObject
-              ? 'bg-red-500 hover:bg-red-600 text-white'
-              : 'bg-blue-600 hover:bg-blue-700 text-white'
-          }`}
+          className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-md text-sm font-medium transition-colors ${isAddingObject
+            ? 'bg-red-500 hover:bg-red-600 text-white'
+            : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
         >
           {isAddingObject ? (
             <>
-              <Trash2 className="w-5 h-5" />
-              <span>Cancel Adding</span>
+              <Trash2 className="w-4 h-4" />
+              Cancel
             </>
           ) : (
             <>
-              <Plus className="w-5 h-5" />
-              <span>Add {OBJECT_ICONS[selectedType]} to Map</span>
+              <Plus className="w-4 h-4" />
+              Add
             </>
           )}
         </button>
@@ -141,28 +138,14 @@ export function Toolbar() {
         <button
           onClick={handleDeleteSelected}
           disabled={!selectedObjectId}
-          className={`w-full flex items-center justify-center gap-2 font-medium py-3 px-4 rounded-lg transition-colors shadow-md ${
-            selectedObjectId
-              ? 'bg-red-600 hover:bg-red-700 text-white'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-          }`}
+          className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-md text-sm font-medium transition-colors ${selectedObjectId
+            ? 'bg-red-600 hover:bg-red-700 text-white'
+            : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+            }`}
         >
-          <Trash2 className="w-5 h-5" />
-          <span>Delete Selected Object</span>
+          <Trash2 className="w-4 h-4" />
+          Delete
         </button>
-      </div>
-
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <p className="text-xs text-gray-500">
-          {isAddingObject
-            ? `Click on the map to place the new ${OBJECT_ICONS[selectedType]}.`
-            : 'Select an object type and shape, then click "Add to Map" to place it.'}
-        </p>
-        {selectedObjectId && (
-          <p className="text-xs text-gray-500 mt-1">
-            Object ID: {selectedObjectId} is currently selected.
-          </p>
-        )}
       </div>
     </div>
   );
