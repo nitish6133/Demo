@@ -1,36 +1,31 @@
-import { useEffect } from 'react';
-import { MapView } from './components/MapView';
-import { Toolbar } from './components/Toolbar';
-import { AnalyticsPanel } from './components/AnalyticsPanel';
-import { LayerControl } from './components/LayerControl';
-import { ObjectEditor } from './components/ObjectEditor';
-import { ImportExport } from './components/ImportExport';
-import { ControlBar } from './components/ControlBar';
-import { useMapStore } from './store/mapStore';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Header from './components/Header';
+import Footer from './components/Footer';
+import FloatingButtons from './components/FloatingButtons';
+import Home from './pages/Home';
+import Services from './pages/Services';
+import Gallery from './pages/Gallery';
+import About from './pages/About';
+import Contact from './pages/Contact';
 
 function App() {
-  const initializeMockData = useMapStore(state => state.initializeMockData);
-
-  useEffect(() => {
-    initializeMockData();
-  }, []);
-
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-gray-900">
-      <MapView />
-      <Toolbar />
-      <AnalyticsPanel />
-      <LayerControl />
-      <ImportExport />
-      <ObjectEditor />
-      <ControlBar />
-
-      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white bg-opacity-95 rounded-lg shadow-xl px-6 py-3 z-10">
-        <h1 className="text-xl font-bold text-gray-800">
-          Urban Design Studio - Birmingham, UK
-        </h1>
+    <Router>
+      <div className="min-h-screen bg-white">
+        <Header />
+        <main>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/services" element={<Services />} />
+            <Route path="/gallery" element={<Gallery />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
+          </Routes>
+        </main>
+        <Footer />
+        <FloatingButtons />
       </div>
-    </div>
+    </Router>
   );
 }
 
