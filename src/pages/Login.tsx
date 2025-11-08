@@ -1,86 +1,71 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Mail, Lock, Chrome, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
-import { Mail, Lock, ArrowRight, UserPlus } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "../stores/useAuthStore";
 import { useToast } from "../components/UI/ToastContainer";
-import Layout from "../components/Layout/Layout";
 import { useProjectConfig } from "../hooks/useProjectConfig";
-import type { LoginProps } from "../types";
-import Button from "../components/UI/Button";
 import { serviceBaseUrl } from "../constants/appConstants";
-import { useNavigate } from "react-router-dom";
+import type { LoginProps } from "../types";
+import Layout from "../components/Layout/Layout";
+import Button from "../components/UI/Button";
 
 const Login: React.FC<LoginProps> = ({
   backendUrl = serviceBaseUrl,
   onSuccess,
   googleLogintheme = {},
-  children
 }) => {
   const {
     Login,
     isLoading: authLoading,
     error: authError,
-    clearError: clearAuthError,
+    clearError,
     loginWithGoogle,
-    verifyTokenAfterLogin, setBackendUrl
+    verifyTokenAfterLogin,
+    setBackendUrl,
   } = useAuthStore();
-  
- const user = useAuthStore.getState().user
+
+  const user = useAuthStore.getState().user;
+  const navigate = useNavigate();
   const { showSuccess, showError } = useToast();
   const { theme } = useProjectConfig();
-  const navigate = useNavigate();
-  const adminRole = import.meta.env.VITE_ADMIN_ROLE || 'admin';
-  const [email, setEmail] = useState("user@example.com");
-  const [password, setPassword] = useState("");
-  const [isFormValid, setIsFormValid] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const adminRole = import.meta.env.VITE_ADMIN_ROLE || "admin";
 
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [isFormValid, setIsFormValid] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Verify token on mount
   useEffect(() => {
     verifyTokenAfterLogin();
   }, [verifyTokenAfterLogin]);
 
+  // Validate form fields
   useEffect(() => {
     setIsFormValid(email.length > 0 && password.length > 0);
   }, [email, password]);
 
+  // Cleanup error on unmount
   useEffect(() => {
     return () => {
-      clearAuthError();
+      clearError();
     };
-  }, [clearAuthError]);
+  }, [clearError]);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    clearAuthError();
-
-    const result = await Login(email, password);
-
-    if (!result.success) {
-      showError(result.error || "Login failed. Please try again!"); // ✅ safe fallback
-    } else {
-      showSuccess(
-        "Welcome Back!",
-        "Successfully logged in! Let's explore your future!"
-      );
-    }
-  };
-
+  // Handle backend URL setup
   useEffect(() => {
     if (backendUrl) {
       setBackendUrl(backendUrl);
     }
   }, [backendUrl, setBackendUrl]);
 
-
+  // Redirect after successful login
   useEffect(() => {
     if (user && onSuccess) {
       onSuccess(user);
     }
-  }, [user, onSuccess]);
-
-  // Auto-redirect if already logged in
-  useEffect(() => {
     if (user) {
       if (user.role === adminRole) {
         navigate("/admin", { replace: true });
@@ -88,234 +73,170 @@ const Login: React.FC<LoginProps> = ({
         navigate("/", { replace: true });
       }
     }
-  }, [user, navigate, adminRole]);
-  const handleContinueWithGoogle = () => {
-    setGoogleLoading(true);
-    loginWithGoogle();
-    setGoogleLoading(false);
+  }, [user, navigate, adminRole, onSuccess]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearError();
+
+    const result = await Login(email, password);
+
+    if (!result.success) {
+      showError(result.error || "Login failed. Please try again!");
+      setError(result.error);
+    } else {
+      showSuccess("Welcome Back!", "Successfully logged in!");
+    }
   };
 
-  const {
-    primaryColor = "",
-    fontFamily = "",
-  } = googleLogintheme;
+  const handleGoogleLogin = async () => {
+    try {
+      setGoogleLoading(true);
+      await loginWithGoogle();
+    } catch (err) {
+      console.error("Google login failed:", err);
+      setError("Google authentication failed. Please try again later.");
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   return (
     <Layout>
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 25 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="w-full max-w-md"
-        >
-          {/* Card */}
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+        <div className="w-full max-w-md">
           <motion.div
-            className="bg-white/95 backdrop-blur-md rounded-3xl shadow-rainbow overflow-hidden"
-            style={{ borderColor: theme.colors.primary[200] }}
-            animate={{
-              boxShadow: [
-                `0 6px 20px ${theme.colors.primary[500]}40`,
-                `0 12px 40px ${theme.colors.accent[500]}60`,
-                `0 6px 20px ${theme.colors.primary[500]}40`,
-              ],
-            }}
-            transition={{ duration: 4, repeat: Infinity }}
+            initial={{ opacity: 0, y: 25 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="shadow-lg border-0 bg-white/90 backdrop-blur-sm rounded-2xl overflow-hidden"
           >
             {/* Header */}
-            <div
-              className="p-6 text-center"
-              style={{ background: theme.gradients.primary }}
-            >
-              <motion.h2
-                className="text-2xl font-extrabold font-display mb-1"
-                style={{ color: "#6586c9" }}
-                animate={{ scale: [1, 1.05, 1] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                Sign In
-              </motion.h2>
-              <p className="text-black/80 font-medium">
-                Enter your magical portal!
-              </p>
+            <div className="space-y-2 text-center p-8 pb-4">
+              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center mb-4">
+                <Lock className="w-8 h-8 text-white" />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900">Welcome Back</h1>
+              <p className="text-gray-600">Sign in to your account to continue</p>
             </div>
 
-            {/* Form */}
-            <div className="p-8">
-              <form onSubmit={handleLogin} className="space-y-6">
-                {/* Email */}
-                <div>
-                  <label
-                    className="block text-sm font-semibold mb-2"
-                    style={{ color: theme.colors.primary[700] }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Mail className="w-4 h-4" />
-                      <span>Email Address</span>
-                    </div>
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    data-testid="email-input"
-                    placeholder="Enter your email"
-                    className="w-full px-4 py-3 rounded-2xl border-2 bg-white transition-all duration-300 font-medium"
-                    style={{
-                      borderColor: theme.colors.primary[200],
-                      color: theme.colors.primary[800]
-                    }}
-                    required
-                  />
+            <div className="px-8 pb-8 space-y-4">
+              {error && (
+                <div className="flex items-center p-3 border border-orange-200 bg-orange-50 rounded-md">
+                  <AlertTriangle className="h-5 w-5 text-orange-600 mr-2" />
+                  <span className="text-sm text-orange-800">{error}</span>
                 </div>
+              )}
 
-                {/* Password */}
-                <div>
-                  <label
-                    className="block text-sm font-semibold mb-2"
-                    style={{ color: theme.colors.secondary[700] }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Lock className="w-4 h-4" />
-                      <span>Password</span>
-                    </div>
-                  </label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    data-testid="password-input"
-                    placeholder="Enter your secret key"
-                    className="w-full px-4 py-3 rounded-2xl border-2 bg-white transition-all duration-300 font-medium"
-                    style={{
-                      borderColor: theme.colors.secondary[200],
-                      color: theme.colors.secondary[800]
-                    }}
-                    required
-                  />
-                </div>
-
-                {/* Submit (Sign In) */}
-                <motion.button
-                  type="submit"
-                  disabled={!isFormValid || authLoading}
-                  data-testid="sign-in-button"
-                  className={`w-full py-3 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 shadow-fun transition-all duration-300 ${isFormValid && !authLoading
-                    ? "cursor-pointer"
-                    : "cursor-not-allowed opacity-50"
-                    }`}
-                  style={{
-                    background: isFormValid && !authLoading ? theme.gradients.primary : "#6586c9",
-                    color: "white",
-                  }}
-                  whileHover={
-                    isFormValid && !authLoading
-                      ? {
-                        scale: 1.02,
-                        boxShadow: `0 12px 24px ${theme.colors.primary[500]}60`,
-                      }
-                      : {}
-                  }
-                  whileTap={isFormValid && !authLoading ? { scale: 0.97 } : {}}
-                >
-                  {authLoading ? (
-                    <>
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                        className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                      />
-                      <span>Logging in...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Sign In</span>
-                      <ArrowRight className="w-5 h-5" />
-                    </>
-                  )}
-                </motion.button>
-
-                {/* Google Login */}
-                <Button
-                  type="button"
-                  onClick={handleContinueWithGoogle}
-                  loading={googleLoading}
-                  className="w-full flex items-center justify-center mt-4 rounded-full" // 👈 added rounded-full
-                  size="lg"
-                  data-testid="google-login-button"
-                  style={{
-                    backgroundColor: primaryColor,
-                    fontFamily,
-                    borderRadius: "9999px", // 👈 force full round
-                    ...(googleLogintheme.buttonStyle || {}),
-                  }}
-                >
-                  <div className="flex items-center space-x-2">
-                    <svg
-                      className="flex-shrink-0"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        fill="#4285F4"
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      />
-                      <path
-                        fill="#34A853"
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      />
-                      <path
-                        fill="#FBBC05"
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                      />
-                      <path
-                        fill="#EA4335"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                      />
-                    </svg>
-
-                    <span className="text-sm font-medium">
-                      {children || "Login with Google"}
-                    </span>
-                  </div>
-                </Button>
-
-
-              </form>
-
-              {/* Divider */}
-              <div className="mt-8 relative flex items-center">
-                <div className="w-full border-t" style={{ borderColor: theme.colors.primary[200] }}></div>
-                <span
-                  className="px-3 bg-white font-medium text-sm"
-                  style={{ color: theme.colors.primary[600] }}
-                >
-                  New here?
-                </span>
-                <div className="w-full border-t" style={{ borderColor: theme.colors.primary[200] }}></div>
+              {/* Email Input */}
+              <div>
+                <label className="block text-sm font-semibold mb-1 text-gray-700">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  data-testid="email-input"
+                  placeholder="Enter your email"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-gray-800"
+                  required
+                />
               </div>
 
-              {/* Register */}
-              <div className="mt-6 text-center">
+              {/* Password Input */}
+              <div>
+                <label className="block text-sm font-semibold mb-1 text-gray-700">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  data-testid="password-input"
+                  placeholder="Enter your password"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-gray-800"
+                  required
+                />
+              </div>
+
+              {/* Sign In Button */}
+              <Button
+                type="submit"
+                onClick={handleLogin}
+                disabled={!isFormValid || authLoading}
+                data-testid="sign-in-button"
+                className={`w-full h-12 font-semibold rounded-xl text-white transition-colors ${
+                  isFormValid
+                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90"
+                    : "bg-gray-300 cursor-not-allowed"
+                }`}
+              >
+                {authLoading ? "Signing in..." : "Sign In"}
+              </Button>
+
+              {/* Google Login Button */}
+              <Button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={googleLoading}
+                data-testid="google-login-button"
+                className="w-full h-12 bg-white border-2 border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors flex items-center justify-center"
+              >
+                <Chrome className="mr-3 h-5 w-5 text-blue-500" />
+                {googleLoading ? "Signing in..." : "Continue with Google"}
+              </Button>
+
+              {/* Divider */}
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-gray-500">
+                    New to the portal?
+                  </span>
+                </div>
+              </div>
+
+              {/* Register Link */}
+              <div className="text-center">
                 <Link
                   to="/register"
-                  className="inline-flex items-center gap-2 px-6 py-3 text-black/80 font-bold rounded-2xl transition-all duration-300 shadow-fun"
-                  style={{ background: theme.gradients.secondary }}
+                  className="inline-flex items-center justify-center w-full h-11 bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold rounded-xl hover:opacity-90 transition-all"
                 >
-                  <UserPlus className="w-5 h-5" />
-                  <span>Create Account</span>
+                  Create Account
                 </Link>
-                <p
-                  className="mt-3 text-sm font-medium"
-                  style={{ color: theme.colors.primary[600] }}
-                >
-                  Don’t have an account? Join our magical journey!
+                <p className="text-sm text-gray-600 mt-3">
+                  Don’t have an account? Join our community today!
                 </p>
               </div>
             </div>
+
+            {/* Footer */}
+            <div className="px-8 py-4 border-t border-gray-100 text-center text-xs text-gray-500">
+              By signing in, you agree to our{" "}
+              <a href="#" className="text-blue-600 hover:underline">
+                Terms of Service
+              </a>{" "}
+              and{" "}
+              <a href="#" className="text-blue-600 hover:underline">
+                Privacy Policy
+              </a>
+              .
+            </div>
           </motion.div>
-        </motion.div>
+
+          {/* Support Link */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Need help?{" "}
+              <a href="#" className="text-blue-600 hover:underline">
+                Contact Support
+              </a>
+            </p>
+          </div>
+        </div>
       </div>
     </Layout>
   );
